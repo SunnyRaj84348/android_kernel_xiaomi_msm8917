@@ -246,6 +246,7 @@ struct smb358_charger {
 	bool			chg_autonomous_mode;
 	bool			disable_apsd;
 	bool			using_pmic_therm;
+	bool			pmic_vbat_sns;
 	bool			battery_missing;
 	const char		*bms_psy_name;
 	bool			resume_completed;
@@ -1299,7 +1300,9 @@ static int smb358_get_prop_batt_temp(struct smb358_charger *chip)
 	int rc = 0;
 	struct qpnp_vadc_result results;
 
-	if (!smb358_get_prop_batt_present(chip))
+	if (!smb358_get_prop_batt_present(chip)
+			|| !chip->vadc_dev
+			|| !chip->using_pmic_therm)
 		return DEFAULT_TEMP;
 
 	rc = qpnp_vadc_read(chip->vadc_dev, P_MUX2_1_1, &results);
@@ -1387,6 +1390,8 @@ static int smb358_path_suspend(struct smb358_charger *chip, int reason,
 
 	mutex_lock(&chip->path_suspend_lock);
 	suspended = chip->usb_suspended;
+	if (!chip->vadc_dev || !chip->pmic_vbat_sns)
+		return 0;
 
 	if (suspend == false)
 		suspended &= ~reason;
@@ -2760,6 +2765,8 @@ static int smb_parse_dt(struct smb358_charger *chip)
 
 	chip->using_pmic_therm = of_property_read_bool(node,
 						"qcom,using-pmic-therm");
+	chip->pmic_vbat_sns = of_property_read_bool(node,
+					"qcom,using-vbat-sns");
 	chip->bms_controlled_charging = of_property_read_bool(node,
 						"qcom,bms-controlled-charging");
 
