@@ -33,8 +33,10 @@ struct cpu_sync {
 
 static DEFINE_PER_CPU(struct cpu_sync, sync_info);
 
-static struct kthread_work input_boost_work;
-static bool input_boost_enabled;
+static struct work_struct input_boost_work;
+
+static unsigned int input_boost_enabled = 1;
+module_param(input_boost_enabled, uint, 0644);
 
 static unsigned int input_boost_ms = 40;
 module_param(input_boost_ms, uint, 0644);
@@ -56,7 +58,6 @@ static int set_input_boost_freq(const char *buf, const struct kernel_param *kp, 
 	int i, ntokens = 0;
 	unsigned int val, cpu;
 	const char *cp = buf;
-	bool enabled = false;
 
 	while ((cp = strpbrk(cp + 1, " :")))
 		ntokens++;
@@ -65,17 +66,9 @@ static int set_input_boost_freq(const char *buf, const struct kernel_param *kp, 
 	if (!ntokens) {
 		if (sscanf(buf, "%u\n", &val) != 1)
 			return -EINVAL;
-		for_each_possible_cpu(i) {
-			if (step == 1)
-				per_cpu(sync_info, i).input_boost_freq = val;
-			else if (step == 2)
-				per_cpu(sync_info, i).input_boost_freq_s2 = val;
-		}
-		if (step == 1)
-			goto check_enable;
-		else if (step == 2)
-			/* Don't think about disabling input boost for step 2 configuration cases */
-			return 0;
+		for_each_possible_cpu(i)
+			per_cpu(sync_info, i).input_boost_freq = val;
+		goto out;
 	}
 
 	/* CPU:value pair */
@@ -98,15 +91,7 @@ static int set_input_boost_freq(const char *buf, const struct kernel_param *kp, 
 		cp++;
 	}
 
-check_enable:
-	for_each_possible_cpu(i) {
-		if (per_cpu(sync_info, i).input_boost_freq) {
-			enabled = true;
-			break;
-		}
-	}
-	input_boost_enabled = enabled;
-
+out:
 	return 0;
 }
 static inline int set_input_boost_freq_s1(const char *buf, const struct kernel_param *kp)
