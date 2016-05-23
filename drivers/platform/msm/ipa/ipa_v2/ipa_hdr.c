@@ -269,7 +269,6 @@ int __ipa_commit_hdr_v2(void)
 	struct ipa_mem_buffer mem;
 	struct ipa_hdr_init_system *cmd = NULL;
 	struct ipa_hw_imm_cmd_dma_shared_mem *dma_cmd = NULL;
-	gfp_t flag = GFP_ATOMIC | (ipa_ctx->use_dma_zone ? GFP_DMA : 0);
 	int rc = -EFAULT;
 
 	if (ipa_generate_hdr_hw_tbl(&mem)) {
@@ -283,7 +282,7 @@ int __ipa_commit_hdr_v2(void)
 				IPA_MEM_PART(apps_hdr_size));
 			goto fail_send_cmd;
 		} else {
-			dma_cmd = kzalloc(sizeof(*dma_cmd), flag);
+			dma_cmd = kzalloc(sizeof(*dma_cmd), GFP_ATOMIC);
 			if (dma_cmd == NULL) {
 				IPAERR("fail to alloc immediate cmd\n");
 				rc = -ENOMEM;
@@ -305,7 +304,7 @@ int __ipa_commit_hdr_v2(void)
 				IPA_MEM_PART(apps_hdr_size_ddr));
 			goto fail_send_cmd;
 		} else {
-			cmd = kzalloc(sizeof(*cmd), flag);
+			cmd = kzalloc(sizeof(*cmd), GFP_ATOMIC);
 			if (cmd == NULL) {
 				IPAERR("fail to alloc hdr init cmd\n");
 				rc = -ENOMEM;
@@ -361,7 +360,6 @@ int __ipa_commit_hdr_v2_5(void)
 	struct ipa_hw_imm_cmd_dma_shared_mem *dma_cmd_hdr = NULL;
 	struct ipa_hw_imm_cmd_dma_shared_mem *dma_cmd_ctx = NULL;
 	struct ipa_register_write *reg_write_cmd = NULL;
-	gfp_t flag = GFP_ATOMIC | (ipa_ctx->use_dma_zone ? GFP_DMA : 0);
 	int rc = -EFAULT;
 	u32 proc_ctx_size;
 	u32 proc_ctx_ofst;
@@ -386,7 +384,7 @@ int __ipa_commit_hdr_v2_5(void)
 				IPA_MEM_PART(apps_hdr_size));
 			goto fail_send_cmd1;
 		} else {
-			dma_cmd_hdr = kzalloc(sizeof(*dma_cmd_hdr), flag);
+			dma_cmd_hdr = kzalloc(sizeof(*dma_cmd_hdr), GFP_ATOMIC);
 			if (dma_cmd_hdr == NULL) {
 				IPAERR("fail to alloc immediate cmd\n");
 				rc = -ENOMEM;
@@ -409,7 +407,7 @@ int __ipa_commit_hdr_v2_5(void)
 			goto fail_send_cmd1;
 		} else {
 			hdr_init_cmd = kzalloc(sizeof(*hdr_init_cmd),
-				flag);
+				GFP_ATOMIC);
 			if (hdr_init_cmd == NULL) {
 				IPAERR("fail to alloc immediate cmd\n");
 				rc = -ENOMEM;
@@ -434,7 +432,7 @@ int __ipa_commit_hdr_v2_5(void)
 			goto fail_send_cmd1;
 		} else {
 			dma_cmd_ctx = kzalloc(sizeof(*dma_cmd_ctx),
-				flag);
+				GFP_ATOMIC);
 			if (dma_cmd_ctx == NULL) {
 				IPAERR("fail to alloc immediate cmd\n");
 				rc = -ENOMEM;
@@ -459,7 +457,7 @@ int __ipa_commit_hdr_v2_5(void)
 			goto fail_send_cmd1;
 		} else {
 			reg_write_cmd = kzalloc(sizeof(*reg_write_cmd),
-				flag);
+				GFP_ATOMIC);
 			if (reg_write_cmd == NULL) {
 				IPAERR("fail to alloc immediate cmd\n");
 				rc = -ENOMEM;
