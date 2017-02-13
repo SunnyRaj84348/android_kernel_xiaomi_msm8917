@@ -3179,7 +3179,9 @@ static int gtp_fb_notifier_callback(struct notifier_block *noti, unsigned long e
 
 	if (ev_data && ev_data->data && event == FB_EVENT_BLANK && ts) {
 		blank = ev_data->data;
-		if (*blank == FB_BLANK_UNBLANK) {
+		if (*blank == FB_BLANK_UNBLANK
+                                  || *blank == FB_BLANK_NORMAL
+                                  || *blank == FB_BLANK_VSYNC_SUSPEND) {
 			GTP_DEBUG("Resume by fb notifier.");
 			goodix_ts_resume(ts);
 
