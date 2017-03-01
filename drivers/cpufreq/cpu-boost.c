@@ -33,8 +33,6 @@ struct cpu_sync {
 
 static DEFINE_PER_CPU(struct cpu_sync, sync_info);
 
-static struct work_struct input_boost_work;
-
 static unsigned int input_boost_enabled = 1;
 module_param(input_boost_enabled, uint, 0644);
 
@@ -53,7 +51,11 @@ static struct delayed_work input_boost_work_s2;
 static struct delayed_work input_boost_rem;
 static u64 last_input_time;
 
-static int set_input_boost_freq(const char *buf, const struct kernel_param *kp, int step)
+static struct kthread_work input_boost_work;
+static struct kthread_worker cpu_boost_worker;
+static struct task_struct *cpu_boost_worker_thread;
+
+static int set_input_boost_freq(const char *buf, const struct kernel_param *kp)
 {
 	int i, ntokens = 0;
 	unsigned int val, cpu;
@@ -233,25 +235,6 @@ static void do_input_boost_rem(struct work_struct *work)
 	}
 }
 
-static void do_input_boost_s2(struct work_struct *work)
-{
-	unsigned int i;
-	struct cpu_sync *i_sync_info;
-
-	/* Set the input_boost_min for all CPUs in the system */
-	pr_debug("Step 2: Setting input boost min for all CPUs\n");
-	for_each_possible_cpu(i) {
-		i_sync_info = &per_cpu(sync_info, i);
-		i_sync_info->input_boost_min = i_sync_info->input_boost_freq_s2;
-	}
-
-	/* Update policies for all online CPUs */
-	update_policy_online();
-
-	queue_delayed_work(system_power_efficient_wq,
-		&input_boost_rem, msecs_to_jiffies(input_boost_ms_s2));
-}
-
 static void do_input_boost(struct kthread_work *work)
 {
 	unsigned int i, ret;
@@ -286,13 +269,8 @@ static void do_input_boost(struct kthread_work *work)
 			sched_boost_active = true;
 	}
 
-	/* Decide behaviour based on whether two-step input boost is enabled */
-	if (!input_boost_ms_s2)
-		queue_delayed_work(system_power_efficient_wq,
-			&input_boost_rem, msecs_to_jiffies(input_boost_ms));
-	else
-		queue_delayed_work(system_power_efficient_wq,
-			&input_boost_work_s2, msecs_to_jiffies(input_boost_ms));
+	queue_delayed_work(system_power_efficient_wq,
+		&input_boost_rem, msecs_to_jiffies(input_boost_ms));
 }
 
 static void cpuboost_input_event(struct input_handle *handle,
@@ -400,7 +378,6 @@ static int cpu_boost_init(void)
 	sched_setscheduler(cpu_boost_worker_thread, SCHED_FIFO, &param);
 
 	init_kthread_work(&input_boost_work, do_input_boost);
-	INIT_DELAYED_WORK(&input_boost_work_s2, do_input_boost_s2);
 	INIT_DELAYED_WORK(&input_boost_rem, do_input_boost_rem);
 
 	for_each_possible_cpu(cpu) {
