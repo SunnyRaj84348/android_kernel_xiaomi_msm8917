@@ -48,5 +48,6 @@ usb_f_accessory-y               := f_accessory.o
 obj-$(CONFIG_USB_F_ACC)         += usb_f_accessory.o
 usb_f_ipc-y                     := f_ipc.o
 obj-$(CONFIG_USB_F_IPC)         += usb_f_ipc.o
-
+usb_f_hid-y                     := f_hid.o
+obj-y                           += usb_f_hid.o
 
