@@ -17,6 +17,8 @@
  */
 
 #include <linux/kernel.h>
+#include <linux/module.h>
+#include <linux/init.h>
 #include <linux/delay.h>
 #include <linux/slab.h>
 #include <linux/spinlock.h>
@@ -41,6 +43,16 @@
 static void dwc3_gadget_wakeup_interrupt(struct dwc3 *dwc, bool remote_wakeup);
 static int dwc3_gadget_wakeup_int(struct dwc3 *dwc);
 
+/*
+ * Some USB functions' endpoints are not enabled at set config stage.
+ * So fifo_resize cannot happen for these endpoints.
+ * So, user can specify Isochronous IN endpoint using high_bw_ep_in_num
+ * to enable fifo_resize to support high bandwidth transfers.
+ */
+static int high_bw_ep_in_num;
+module_param(high_bw_ep_in_num, int, S_IRUGO | S_IWUSR);
+MODULE_PARM_DESC(high_bw_ep_in_num,
+		"Isoc ep number to support for HS high bandwidth transfer");
 /**
  * dwc3_gadget_set_test_mode - Enables USB2 Test Modes
  * @dwc: pointer to our context structure
@@ -214,6 +226,9 @@ int dwc3_gadget_resize_tx_fifos(struct dwc3 *dwc)
 		 */
 		if (dep->endpoint.ep_type == EP_TYPE_GSI ||
 				dep->endpoint.endless)
+			mult = 3;
+
+		if (num == high_bw_ep_in_num)
 			mult = 3;
 
 		if (!(dep->flags & DWC3_EP_ENABLED)) {
@@ -831,6 +846,7 @@ static void dwc3_prepare_one_trb(struct dwc3_ep *dep,
 	struct dwc3_trb		*trb;
 	bool			zlp_appended = false;
 	unsigned		rlen;
+	int			isoc_maxp;
 
 	dev_vdbg(dwc->dev, "%s: req %pK dma %08llx length %d%s%s\n",
 			dep->name, req, (unsigned long long) dma,
@@ -864,6 +880,8 @@ update_trb:
 		break;
 
 	case USB_ENDPOINT_XFER_ISOC:
+		isoc_maxp = usb_endpoint_maxp(dep->endpoint.desc);
+		trb->size |= DWC3_TRB_SIZE_PCM1(isoc_maxp >> 11);
 		if (!node)
 			trb->ctrl = DWC3_TRBCTL_ISOCHRONOUS_FIRST;
 		else
@@ -1414,13 +1432,6 @@ static int dwc3_gadget_wakeup(struct usb_gadget *g)
 
 	schedule_work(&dwc->wakeup_work);
 	return 0;
-}
-
-static inline enum dwc3_link_state dwc3_get_link_state(struct dwc3 *dwc)
-{
-	u32 reg;
-	reg = dwc3_readl(dwc->regs, DWC3_DSTS);
-	return DWC3_DSTS_USBLNKST(reg);
 }
 
 static bool dwc3_gadget_is_suspended(struct dwc3 *dwc)
@@ -3689,6 +3700,9 @@ int dwc3_gadget_init(struct dwc3 *dwc)
 	 * REVISIT: Here we should clear all pending IRQs to be
 	 * sure we're starting from a well known location.
 	 */
+
+	dwc->gadget.usb_core_id = dwc->core_id;
+	dev_dbg(dwc->dev, "%s core_id : %d\n", __func__, dwc->core_id);
 
 	ret = dwc3_gadget_init_endpoints(dwc);
 	if (ret)

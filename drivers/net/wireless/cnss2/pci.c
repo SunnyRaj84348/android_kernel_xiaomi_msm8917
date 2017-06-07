@@ -1088,7 +1088,7 @@ void cnss_pci_collect_dump_info(struct cnss_pci_data *pci_priv)
 
 	dump_data->nentries = 0;
 
-	start_addr = dump_data->vaddr;
+	start_addr = plat_priv->ramdump_info_v2.dump_data_vaddr;
 	end_addr = cnss_pci_collect_dump_seg(pci_priv,
 					     MHI_RDDM_FW_SEGMENT, start_addr);
 
@@ -1111,12 +1111,16 @@ void cnss_pci_clear_dump_info(struct cnss_pci_data *pci_priv)
 static void cnss_mhi_notify_status(enum MHI_CB_REASON reason, void *priv)
 {
 	struct cnss_pci_data *pci_priv = priv;
+	struct cnss_plat_data *plat_priv = pci_priv->plat_priv;
 	enum cnss_recovery_reason cnss_reason = CNSS_REASON_RDDM;
 
 	if (!pci_priv)
 		return;
 
 	cnss_pr_dbg("MHI status cb is called with reason %d\n", reason);
+
+	set_bit(CNSS_DEV_ERR_NOTIFY, &plat_priv->driver_state);
+	del_timer(&plat_priv->fw_boot_timer);
 
 	if (reason == MHI_CB_SYS_ERROR)
 		cnss_reason = CNSS_REASON_TIMEOUT;
@@ -1351,6 +1355,7 @@ void cnss_pci_stop_mhi(struct cnss_pci_data *pci_priv)
 
 	plat_priv = pci_priv->plat_priv;
 
+	cnss_pci_set_mhi_state_bit(pci_priv, CNSS_MHI_RESUME);
 	cnss_pci_set_mhi_state(pci_priv, CNSS_MHI_POWER_OFF);
 	if (!plat_priv->ramdump_info_v2.dump_data_valid)
 		cnss_pci_set_mhi_state(pci_priv, CNSS_MHI_DEINIT);

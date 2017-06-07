@@ -51,6 +51,7 @@
 #define IPA_UC_FINISH_MAX 6
 #define IPA_UC_WAIT_MIN_SLEEP 1000
 #define IPA_UC_WAII_MAX_SLEEP 1200
+#define IPA_BAM_STOP_MAX_RETRY 10
 
 #define IPA_MAX_STATUS_STAT_NUM 30
 
@@ -837,6 +838,7 @@ struct ipa_active_clients {
 struct ipa_wakelock_ref_cnt {
 	spinlock_t spinlock;
 	u32 cnt;
+	bool wakelock_acquired;
 };
 
 struct ipa_tag_completion {

@@ -114,9 +114,10 @@
 		reg =   <0x7702000 0x4>,
 			<0x7702004 0x4>,
 			<0x7702008 0x4>;
-		reg-names =	"csr_gp_io_mux_mic_ctl",
-				"csr_gp_io_mux_spkr_ctl",
-				"csr_gp_io_lpaif_pri_pcm_pri_mode_muxsel";
+		reg-names =
+			"csr_gp_io_mux_mic_ctl",
+			"csr_gp_io_mux_spkr_ctl",
+			"csr_gp_io_lpaif_pri_pcm_pri_mode_muxsel";
 		qcom,msm-snd-card-id = <0>;
 		qcom,msm-codec-type = "internal";
 		qcom,msm-ext-pa = "primary";

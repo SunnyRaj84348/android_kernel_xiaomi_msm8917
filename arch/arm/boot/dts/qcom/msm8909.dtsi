@@ -125,7 +125,7 @@
 		};
 
 		peripheral_mem: pheripheral_region@0 {
-			reg = <0x0 0x8d500000 0x0 0x0500000>;
+			reg = <0x0 0x8d500000 0x0 0x0700000>;
 			compatible = "removed-dma-pool";
 			no-map;
 		};
@@ -171,6 +171,7 @@
 #include "msm8909-bus.dtsi"
 #include "msm8909-mdss.dtsi"
 #include "msm8909-mdss-pll.dtsi"
+#include "msm8909-camera.dtsi"
 
 &soc {
 	#address-cells = <1>;
@@ -602,6 +603,7 @@
 				qcom,cycles-per-mb = <1015>;
 			};
 		};
+
 		qcom,vidc-iommu-domains {
 			qcom,domain-ns {
 				qcom,vidc-domain-phandle = <&venus_domain_ns>;
@@ -623,6 +625,7 @@
 				qcom,vidc-buffer-types = <0x480>;
 			};
 		};
+
 		venus_bus_ddr {
 			compatible = "qcom,msm-vidc,bus";
 			label = "venus-ddr";
@@ -662,6 +665,7 @@
 					<9000   35000>,    /* QVGA30E    */
 					<0      0>;
 				};
+
 				qcom,profile-dec {
 					qcom,codec-mask = <0xffffffff>;
 					qcom,load-busfreq-tbl =
@@ -680,6 +684,7 @@
 			};
 		};
 	};
+
 	qcom,smem@87d00000 {
 		compatible = "qcom,smem";
 		reg = <0x87d00000 0x100000>,

@@ -36,6 +36,8 @@
 #define KSZ8851_TX_SPACE (6144 * 3)
 #define TX_DMA_BUFFER_SIZE (8192 * 3)
 #define RX_DMA_BUFFER_SIZE (2048 * 2)
+#define CIDER_READ_MAX_ITER 20
+#define CIDER_READ_MAX_DELAY 20
 
 /**
  * struct ks8851_rxctrl - KS8851 driver rx control
@@ -825,13 +827,14 @@ static void ks8851_wrpkts3(struct ks8851_net *ks)
 			dev->stats.tx_bytes += txb->len;
 			dev->stats.tx_packets++;
 			txb->tstamp = ktime_get();
-			/* create clone for us to return on the Tx path */
-			clone = skb_clone_sk(txb);
-			if (clone) {
-				memset(&hwtstamps, 0,
-				       sizeof(struct skb_shared_hwtstamps));
-				skb_complete_tx_timestamp(clone, &hwtstamps);
+			if (skb_shinfo(txb)->tx_flags & SKBTX_SW_TSTAMP &&
+			    !(skb_shinfo(txb)->tx_flags & SKBTX_IN_PROGRESS)) {
+				clone = skb_clone_sk(txb);
+				if (clone)
+					skb_complete_tx_timestamp(clone,
+								  &hwtstamps);
 			}
+
 			dev_kfree_skb(txb);
 		}
 	}
@@ -1360,6 +1363,7 @@ static const struct ethtool_ops ks8851_ethtool_ops = {
 	.get_eeprom_len	= ks8851_get_eeprom_len,
 	.get_eeprom	= ks8851_get_eeprom,
 	.set_eeprom	= ks8851_set_eeprom,
+	.get_ts_info	= ethtool_op_get_ts_info,
 };
 
 /* MII interface controls */
@@ -1510,6 +1514,7 @@ static int ks8851_probe(struct spi_device *spi)
 	int ret;
 	unsigned cider;
 	int gpio;
+	int iter;
 
 	pr_info("eth: spi KS8851 Probe\n");
 	ndev = alloc_etherdev(sizeof(struct ks8851_net));
@@ -1571,8 +1576,8 @@ static int ks8851_probe(struct spi_device *spi)
 
 	if (gpio_is_valid(gpio)) {
 		pr_debug("eth: spi reset GPIO set to 1\n");
-		usleep_range(10000, 11000);
-		gpio_direction_output(gpio, 0x1);
+		ret = gpio_direction_output(gpio, 0x1);
+		pr_debug("ks8851:return value for reset is %d\n", ret);
 	} else {
 		pr_debug("[%s:]eth: spi reset GPIO is invalid\n", __func__);
 	}
@@ -1634,7 +1639,14 @@ static int ks8851_probe(struct spi_device *spi)
 	/* Set SCLK for falling edge MISO (Chip Rev A3 only) */
 	/*ks8851_wrreg16(ks, KS_OBCR, 0x08);*/
 	/* simple check for a valid chip being connected to the bus */
-	cider = ks8851_32bitrdreg16(ks, KS_CIDER);
+	for (iter = 0; iter <= CIDER_READ_MAX_ITER; iter++) {
+		cider = ks8851_32bitrdreg16(ks, KS_CIDER);
+		if ((cider & ~CIDER_REV_MASK) == CIDER_ID) {
+			pr_debug("value for cider received as %08X\n", cider);
+			break;
+		}
+		msleep(CIDER_READ_MAX_DELAY);
+	}
 	pr_debug("###################################\n");
 	pr_debug("## eth: spi Chip ID Ox:%08X  ##\n", cider);
 	pr_debug("###################################\n");

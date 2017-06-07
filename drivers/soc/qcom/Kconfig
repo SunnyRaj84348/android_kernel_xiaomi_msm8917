@@ -418,6 +418,15 @@ config MSM_SMEM
 	  processors in the System on a Chip (SoC) which allows basic
 	  inter-processor communication.
 
+config QPNP_PBS
+	tristate "PBS trigger support for QPNP PMIC"
+	depends on MSM_SPMI
+	help
+	  This driver supports configuring software PBS trigger event through PBS
+	  RAM on Qualcomm Technologies, Inc. QPNP PMICs. This module provides
+	  the APIs to the client drivers that wants to send the PBS trigger
+	  event to the PBS RAM.
+
 config MSM_SMD
 	depends on MSM_SMEM
 	bool "MSM Shared Memory Driver (SMD)"
@@ -510,6 +519,15 @@ config MSM_SMP2P
 	  memory and interrupts. A client can open multiple
 	  32-bit values by specifying a unique string and
 	  remote processor ID.
+
+config MSM_BGCOM_INTERFACE
+	bool "Driver support for Blackghost Communication"
+	depends on MSM_BGCOM
+	help
+	 Create a bg_com_dev device node for user space communication.
+	 Single user space client can open device node for communication
+	 from hardware. Hardware will provide access to read
+	 registers and read/write AHB memory in the device.
 
 config MSM_SMP2P_TEST
 	bool "SMSM Point-to-Point Test"
@@ -819,6 +837,14 @@ config MSM_KERNEL_PROTECT_TEST
           Attempts to write to the kernel text after making the kernel text
           read-only.  This test is FATAL whether it passes or fails!
           Success is signaled by a stage-2 fault.
+
+config MSM_BGCOM
+	bool "Provide APIs to communicate with Blackghost chipset"
+	help
+		BGCOM is a thin layer above SPI. It is used whithin a SoC for
+		communication between G-Link/bg_com_dev and BG processor over SPI.
+		This handle the interrupts raised by BG and notify the G-link with
+		interrupt event and event data.
 
 config MSM_REMOTEQDSS
 	bool "Allow debug tools to enable events on other processors"

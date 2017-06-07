@@ -72,13 +72,14 @@ struct cnss_dump_data {
 	uint32_t magic;
 	char name[32];
 	phys_addr_t paddr;
-	void *vaddr;
 	int nentries;
+	uint32_t seg_version;
 };
 
 struct cnss_ramdump_info_v2 {
 	struct ramdump_device *ramdump_dev;
 	unsigned long ramdump_size;
+	void *dump_data_vaddr;
 	bool dump_data_valid;
 	struct cnss_dump_data dump_data;
 };
@@ -136,6 +137,8 @@ enum cnss_driver_state {
 	CNSS_DRIVER_UNLOADING,
 	CNSS_DRIVER_PROBED,
 	CNSS_DRIVER_RECOVERY,
+	CNSS_FW_BOOT_RECOVERY,
+	CNSS_DEV_ERR_NOTIFY,
 };
 
 struct cnss_recovery_data {
@@ -196,7 +199,7 @@ struct cnss_plat_data {
 	struct cnss_pin_connect_result pin_result;
 	struct dentry *root_dentry;
 	atomic_t pm_count;
-	struct timer_list fw_ready_timer;
+	struct timer_list fw_boot_timer;
 };
 
 void *cnss_bus_dev_to_bus_priv(struct device *dev);

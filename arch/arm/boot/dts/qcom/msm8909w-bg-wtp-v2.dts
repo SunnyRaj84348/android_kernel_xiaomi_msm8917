@@ -15,10 +15,9 @@
 
 #include "msm8909-mtp.dtsi"
 #include "msm8909w-gpu.dtsi"
-#include "msm8909-pm8916.dtsi"
-#include "msm8909-pm8916-mtp.dtsi"
 #include "msm8909w.dtsi"
 #include "msm8909w-memory.dtsi"
+#include "msm8909w-pm660-mtp.dtsi"
 
 / {
 	model = "Qualcomm Technologies, Inc. MSM8909W-PM660 BLACKGHOST WTP";
@@ -67,6 +66,12 @@
 			ite,cfg-name = "it7260_cfg_62011E01.bin";
 			ite,avdd-lpm-cur = <3000>;
 		};
+
+		it7260@46 {
+			/* Update with PM660 regulator handles */
+			/delete-property/ avdd-supply;
+			/delete-property/ vdd-supply;
+		};
 	};
 
 	qcom,msm-ssc-sensors {
@@ -83,15 +88,33 @@
 };
 
 &i2c_3 {
-	status = "ok";
+	status = "disabled";
 };
 
 &i2c_2 {
-	status = "ok";
+	status = "disabled";
+};
+
+&sdhc_2 {
+	status = "disabled";
 };
 
 &blsp1_uart1 {
 	status = "ok";
 	pinctrl-names = "default";
 	pinctrl-0 = <&uart_console_sleep>;
+};
+
+&soc
+{
+	spi@78b6000 { /* BLSP1 QUP2 */
+		status = "ok";
+		qcom,bg-spi {
+			compatible = "qcom,bg-spi";
+			reg = <0>;
+			spi-max-frequency = <19200000>;
+			interrupt-parent = <&msm_gpio>;
+			qcom,irq-gpio = <&msm_gpio 110 1>;
+		};
+	};
 };
