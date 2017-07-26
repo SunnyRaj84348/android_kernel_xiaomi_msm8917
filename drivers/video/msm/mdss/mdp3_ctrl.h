@@ -48,6 +48,8 @@ struct mdp3_session_data {
 	int vsync_period;
 	struct kernfs_node *vsync_event_sd;
 	struct kernfs_node *bl_event_sd;
+	struct kernfs_node *ad_bl_event_sd;
+	struct kernfs_node *ad_event_sd;
 	struct mdp_overlay overlay;
 	struct mdp_overlay req_overlay;
 	struct mdp3_buffer_queue bufq_in;

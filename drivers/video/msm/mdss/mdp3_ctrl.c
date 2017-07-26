@@ -415,6 +415,12 @@ static ssize_t mdp3_bl_show_event(struct device *dev,
 	return ret;
 }
 
+static ssize_t mdp3_ad_event(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	return 0;
+}
+
 static ssize_t mdp3_hist_show_event(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
@@ -522,6 +528,8 @@ static ssize_t mdp3_dyn_pu_store(struct device *dev,
 
 static DEVICE_ATTR(hist_event, S_IRUGO, mdp3_hist_show_event, NULL);
 static DEVICE_ATTR(bl_event, S_IRUGO, mdp3_bl_show_event, NULL);
+static DEVICE_ATTR(ad_bl_event, S_IRUGO, mdp3_ad_event, NULL);
+static DEVICE_ATTR(ad_event, S_IRUGO, mdp3_ad_event, NULL);
 static DEVICE_ATTR(vsync_event, S_IRUGO, mdp3_vsync_show_event, NULL);
 static DEVICE_ATTR(packpattern, S_IRUGO, mdp3_packpattern_show, NULL);
 static DEVICE_ATTR(dyn_pu, S_IRUGO | S_IWUSR | S_IWGRP, mdp3_dyn_pu_show,
@@ -532,6 +540,8 @@ static struct attribute *generic_attrs[] = {
 	&dev_attr_dyn_pu.attr,
 	&dev_attr_hist_event.attr,
 	&dev_attr_bl_event.attr,
+	&dev_attr_ad_bl_event.attr,
+	&dev_attr_ad_event.attr,
 	NULL,
 };
 
@@ -2940,6 +2950,23 @@ int mdp3_ctrl_init(struct msm_fb_data_type *mfd)
 		rc = -ENODEV;
 		goto init_done;
 	}
+
+	mdp3_session->ad_bl_event_sd = sysfs_get_dirent(dev->kobj.sd,
+							"ad_bl_event");
+	if (!mdp3_session->ad_bl_event_sd) {
+		pr_err("ad_bl_event sysfs lookup failed\n");
+		rc = -ENODEV;
+		goto init_done;
+	}
+
+	mdp3_session->ad_event_sd = sysfs_get_dirent(dev->kobj.sd,
+							"ad_event");
+	if (!mdp3_session->ad_event_sd) {
+		pr_err("ad_event sysfs lookup failed\n");
+		rc = -ENODEV;
+		goto init_done;
+	}
+
 
 	rc = mdp3_create_sysfs_link(dev);
 	if (rc)
