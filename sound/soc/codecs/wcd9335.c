@@ -5913,8 +5913,6 @@ static int tasha_codec_enable_dec(struct snd_soc_dapm_widget *w,
 					    CF_MIN_3DB_150HZ << 5);
 		/* Enable TX PGA Mute */
 		snd_soc_update_bits(codec, tx_vol_ctl_reg, 0x10, 0x10);
-		/* Enable APC */
-		snd_soc_update_bits(codec, dec_cfg_reg, 0x08, 0x08);
 		break;
 	case SND_SOC_DAPM_POST_PMU:
 		snd_soc_update_bits(codec, hpf_gate_reg, 0x01, 0x00);
@@ -5941,7 +5939,6 @@ static int tasha_codec_enable_dec(struct snd_soc_dapm_widget *w,
 		hpf_cut_off_freq =
 			tasha->tx_hpf_work[decimator].hpf_cut_off_freq;
 		snd_soc_update_bits(codec, tx_vol_ctl_reg, 0x10, 0x10);
-		snd_soc_update_bits(codec, dec_cfg_reg, 0x08, 0x00);
 		if (cancel_delayed_work_sync(
 		    &tasha->tx_hpf_work[decimator].dwork)) {
 			if (hpf_cut_off_freq != CF_MIN_3DB_150HZ) {
@@ -11481,10 +11478,10 @@ static int tasha_set_decimator_rate(struct snd_soc_dai *dai,
 	struct tasha_priv *tasha = snd_soc_codec_get_drvdata(codec);
 	u32 tx_port;
 	u8 shift, shift_val, tx_mux_sel;
-	int decimator = -1;
 	u16 tx_port_reg, tx_fs_reg;
 
 	list_for_each_entry(ch, &tasha->dai[dai->id].wcd9xxx_ch_list, list) {
+		int decimator = -1;
 		tx_port = ch->port;
 		dev_dbg(codec->dev, "%s: dai->id = %d, tx_port = %d",
 			__func__, dai->id, tx_port);

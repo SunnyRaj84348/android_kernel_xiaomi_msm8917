@@ -65,24 +65,43 @@ struct bg_spi_priv {
 	int irq_lock;
 };
 
-struct bg_context {
-	struct bg_spi_priv *bg_spi;
-	enum bgcom_state state;
-};
-
 struct cb_data {
-	struct bg_context *handle;
 	void *priv;
+	void *handle;
 	void (*bgcom_notification_cb)(void *handle, void *priv,
 		enum bgcom_event_type event,
 		union bgcom_event_data_type *event_data);
+	struct list_head list;
 };
 
-static struct cb_data *irq_notification;
+struct bg_context {
+	struct bg_spi_priv *bg_spi;
+	enum bgcom_state state;
+	struct cb_data *cb;
+};
 
 static void *bg_com_drv;
-
 static uint32_t g_slav_status_reg;
+
+/* BGCOM client callbacks set-up */
+static struct list_head cb_head = LIST_HEAD_INIT(cb_head);
+
+static enum bgcom_spi_state spi_state;
+
+int bgcom_set_spi_state(enum bgcom_spi_state state)
+{
+	if (state < 0 || state > 1)
+		return -EINVAL;
+	spi_state = state;
+	return 0;
+}
+EXPORT_SYMBOL(bgcom_set_spi_state);
+
+static inline
+void add_to_irq_list(struct  cb_data *data)
+{
+	list_add_tail(&data->list, &cb_head);
+}
 
 static bool is_bgcom_ready(void)
 {
@@ -169,13 +188,19 @@ static int bgcom_transfer(void *handle, uint8_t *tx_buf,
 
 /* BG-COM Interrupt handling */
 static inline
-void send_event(struct cb_data *cb,
-		enum bgcom_event_type event, void *data)
+void send_event(enum bgcom_event_type event,
+	void *data)
 {
-	if (!cb)
-		return;
-	cb->bgcom_notification_cb(cb->handle,
-			cb->priv,  event, data);
+	struct list_head *pos;
+	struct cb_data *cb;
+
+	/* send interrupt notification for each
+	registered call-back */
+	list_for_each(pos, &cb_head) {
+		cb = list_entry(pos, struct cb_data, list);
+		cb->bgcom_notification_cb(cb->handle,
+		cb->priv,  event, data);
+	}
 }
 
 static void send_back_notification(uint32_t slav_status_reg,
@@ -192,73 +217,62 @@ static void send_back_notification(uint32_t slav_status_reg,
 	slave_fifo_free = (uint16_t)(fifo_fill_reg >> 16);
 
 	if (slav_status_auto_clear_reg & BIT(31))
-		send_event(irq_notification,
-			BGCOM_EVENT_RESET_OCCURRED, NULL);
+		send_event(BGCOM_EVENT_RESET_OCCURRED, NULL);
 
 	if (slav_status_auto_clear_reg & BIT(30))
-		send_event(irq_notification,
-			BGCOM_EVENT_ERROR_WRITE_FIFO_OVERRUN, NULL);
+		send_event(BGCOM_EVENT_ERROR_WRITE_FIFO_OVERRUN, NULL);
 
 	if (slav_status_auto_clear_reg & BIT(29))
-		send_event(irq_notification,
-			BGCOM_EVENT_ERROR_WRITE_FIFO_BUS_ERR, NULL);
+		send_event(BGCOM_EVENT_ERROR_WRITE_FIFO_BUS_ERR, NULL);
 
 	if (slav_status_auto_clear_reg & BIT(28))
-		send_event(irq_notification,
-			BGCOM_EVENT_ERROR_WRITE_FIFO_ACCESS, NULL);
+		send_event(BGCOM_EVENT_ERROR_WRITE_FIFO_ACCESS, NULL);
 
 	if (slav_status_auto_clear_reg & BIT(27))
-		send_event(irq_notification,
-			BGCOM_EVENT_ERROR_READ_FIFO_UNDERRUN, NULL);
+		send_event(BGCOM_EVENT_ERROR_READ_FIFO_UNDERRUN, NULL);
 
 	if (slav_status_auto_clear_reg & BIT(26))
-		send_event(irq_notification,
-			BGCOM_EVENT_ERROR_READ_FIFO_BUS_ERR, NULL);
+		send_event(BGCOM_EVENT_ERROR_READ_FIFO_BUS_ERR, NULL);
 
 	if (slav_status_auto_clear_reg & BIT(25))
-		send_event(irq_notification,
-			BGCOM_EVENT_ERROR_READ_FIFO_ACCESS, NULL);
+		send_event(BGCOM_EVENT_ERROR_READ_FIFO_ACCESS, NULL);
 
 	if (slav_status_auto_clear_reg & BIT(24))
-		send_event(irq_notification,
-			BGCOM_EVENT_ERROR_TRUNCATED_READ, NULL);
+		send_event(BGCOM_EVENT_ERROR_TRUNCATED_READ, NULL);
 
 	if (slav_status_auto_clear_reg & BIT(23))
-		send_event(irq_notification,
-			BGCOM_EVENT_ERROR_TRUNCATED_WRITE, NULL);
+		send_event(BGCOM_EVENT_ERROR_TRUNCATED_WRITE, NULL);
 
 	if (slav_status_auto_clear_reg & BIT(22))
-		send_event(irq_notification,
-			BGCOM_EVENT_ERROR_AHB_ILLEGAL_ADDRESS, NULL);
+		send_event(BGCOM_EVENT_ERROR_AHB_ILLEGAL_ADDRESS, NULL);
 
 	if (slav_status_auto_clear_reg & BIT(21))
-		send_event(irq_notification,
-			BGCOM_EVENT_ERROR_AHB_BUS_ERR, NULL);
+		send_event(BGCOM_EVENT_ERROR_AHB_BUS_ERR, NULL);
 
 	/* check if BG status is changed */
 	if (g_slav_status_reg ^ slav_status_reg) {
 		if (slav_status_reg & BIT(30)) {
 			event_data.application_running = true;
-			send_event(irq_notification,
-				BGCOM_EVENT_APPLICATION_RUNNING, &event_data);
+			send_event(BGCOM_EVENT_APPLICATION_RUNNING,
+				&event_data);
 		}
 
 		if (slav_status_reg & BIT(29)) {
 			event_data.to_slave_fifo_ready = true;
-			send_event(irq_notification,
-				BGCOM_EVENT_TO_SLAVE_FIFO_READY, &event_data);
+			send_event(BGCOM_EVENT_TO_SLAVE_FIFO_READY,
+				&event_data);
 		}
 
 		if (slav_status_reg & BIT(28)) {
 			event_data.to_master_fifo_ready = true;
-			send_event(irq_notification,
-				BGCOM_EVENT_TO_MASTER_FIFO_READY, &event_data);
+			send_event(BGCOM_EVENT_TO_MASTER_FIFO_READY,
+				&event_data);
 		}
 
 		if (slav_status_reg & BIT(27)) {
 			event_data.ahb_ready = true;
-			send_event(irq_notification,
-				BGCOM_EVENT_AHB_READY, &event_data);
+			send_event(BGCOM_EVENT_AHB_READY,
+				&event_data);
 		}
 	}
 
@@ -272,17 +286,15 @@ static void send_back_notification(uint32_t slav_status_reg,
 				event_data.fifo_data.to_master_fifo_used =
 					master_fifo_used;
 				event_data.fifo_data.data = ptr;
-				send_event(irq_notification,
-					BGCOM_EVENT_TO_MASTER_FIFO_USED,
-						&event_data);
+				send_event(BGCOM_EVENT_TO_MASTER_FIFO_USED,
+					&event_data);
 			}
 		}
 	}
 
 	if (slave_fifo_free > 0) {
 		event_data.to_slave_fifo_free = slave_fifo_free;
-		send_event(irq_notification,
-			BGCOM_EVENT_TO_SLAVE_FIFO_FREE, &event_data);
+		send_event(BGCOM_EVENT_TO_SLAVE_FIFO_FREE, &event_data);
 	}
 }
 
@@ -328,6 +340,13 @@ int bgcom_ahb_read(void *handle, uint32_t ahb_start_addr,
 		|| num_words > BG_SPI_MAX_WORDS) {
 		pr_err("Invalid param\n");
 		return -EINVAL;
+	}
+	if (!is_bgcom_ready())
+		return -ENODEV;
+
+	if (spi_state == BGCOM_SPI_BUSY) {
+		pr_err("Device busy\n");
+		return -EBUSY;
 	}
 
 	size = num_words*BG_SPI_WORD_SIZE;
@@ -381,6 +400,11 @@ int bgcom_ahb_write(void *handle, uint32_t ahb_start_addr,
 	if (!is_bgcom_ready())
 		return -ENODEV;
 
+	if (spi_state == BGCOM_SPI_BUSY) {
+		pr_err("Device busy\n");
+		return -EBUSY;
+	}
+
 	size = num_words*BG_SPI_WORD_SIZE;
 	txn_len = BG_SPI_AHB_CMD_LEN + size;
 
@@ -419,6 +443,12 @@ int bgcom_fifo_write(void *handle, uint32_t num_words,
 
 	if (!is_bgcom_ready())
 		return -ENODEV;
+
+	if (spi_state == BGCOM_SPI_BUSY) {
+		pr_err("Device busy\n");
+		return -EBUSY;
+	}
+
 	size = num_words*BG_SPI_WORD_SIZE;
 	txn_len = BG_SPI_WRITE_CMND_LEN + size;
 
@@ -455,6 +485,12 @@ int bgcom_fifo_read(void *handle, uint32_t num_words,
 
 	if (!is_bgcom_ready())
 		return -ENODEV;
+
+	if (spi_state == BGCOM_SPI_BUSY) {
+		pr_err("Device busy\n");
+		return -EBUSY;
+	}
+
 	size = num_words*BG_SPI_WORD_SIZE;
 	txn_len = BG_SPI_READ_LEN + size;
 	tx_buf = kzalloc(txn_len, GFP_KERNEL | GFP_ATOMIC);
@@ -500,6 +536,11 @@ int bgcom_reg_write(void *handle, uint8_t reg_start_addr,
 	if (!is_bgcom_ready())
 		return -ENODEV;
 
+	if (spi_state == BGCOM_SPI_BUSY) {
+		pr_err("Device busy\n");
+		return -EBUSY;
+	}
+
 	size = num_regs*BG_SPI_WORD_SIZE;
 	txn_len = BG_SPI_WRITE_CMND_LEN + size;
 
@@ -533,6 +574,15 @@ int bgcom_reg_read(void *handle, uint8_t reg_start_addr,
 		pr_err("Invalid param\n");
 		return -EINVAL;
 	}
+
+	if (!is_bgcom_ready())
+		return -ENODEV;
+
+	if (spi_state == BGCOM_SPI_BUSY) {
+		pr_err("Device busy\n");
+		return -EBUSY;
+	}
+
 	size = num_regs*BG_SPI_WORD_SIZE;
 	txn_len = BG_SPI_READ_LEN + size;
 
@@ -577,6 +627,7 @@ EXPORT_SYMBOL(bgcom_suspend);
 void *bgcom_open(struct bgcom_open_config_type *open_config)
 {
 	struct bg_spi_priv *spi;
+	struct cb_data *irq_notification;
 	struct bg_context  *clnt_handle =
 			kzalloc(sizeof(*clnt_handle), GFP_KERNEL);
 
@@ -592,33 +643,42 @@ void *bgcom_open(struct bgcom_open_config_type *open_config)
 		clnt_handle->bg_spi = spi;
 		clnt_handle->state = BGCOM_PROB_SUCCESS;
 	}
-
+	clnt_handle->cb = NULL;
 	/* Interrupt callback Set-up */
 	if (open_config && open_config->bgcom_notification_cb) {
-		/* deregister the prevoius call-back */
-		if (irq_notification) {
-			pr_debug("freeing previous callback\n");
-			kfree(irq_notification);
-		}
 		irq_notification = kzalloc(sizeof(*irq_notification),
-								GFP_KERNEL);
-		if (!irq_notification) {
-			kfree(clnt_handle);
-			return NULL;
-		}
+			GFP_KERNEL);
+		if (!irq_notification)
+			goto error_ret;
+
+		/* set irq node */
 		irq_notification->handle = clnt_handle;
 		irq_notification->priv = open_config->priv;
 		irq_notification->bgcom_notification_cb =
 					open_config->bgcom_notification_cb;
+		add_to_irq_list(irq_notification);
+		clnt_handle->cb = irq_notification;
 	}
 	return clnt_handle;
+
+error_ret:
+	kfree(clnt_handle);
+	return NULL;
 }
 EXPORT_SYMBOL(bgcom_open);
 
 int bgcom_close(void **handle)
 {
+	struct bg_context *lhandle;
+	struct cb_data *cb = NULL;
+
 	if (*handle == NULL)
 		return -EINVAL;
+	lhandle = *handle;
+	cb = lhandle->cb;
+	if (cb)
+		list_del(&cb->list);
+
 	kfree(*handle);
 	*handle = NULL;
 	return 0;
@@ -628,12 +688,13 @@ EXPORT_SYMBOL(bgcom_close);
 static irqreturn_t bg_irq_tasklet_hndlr(int irq, void *device)
 {
 	struct bg_spi_priv *bg_spi = device;
-
-	if (!irq_notification || !irq_notification->bgcom_notification_cb) {
+	/* check if call-back exists */
+	if (list_empty(&cb_head)) {
 		pr_debug("No callback registered\n");
 		return IRQ_HANDLED;
-	}
-	if (!bg_spi->irq_lock) {
+	} else if (spi_state == BGCOM_SPI_BUSY) {
+		return IRQ_HANDLED;
+	} else if (!bg_spi->irq_lock) {
 		bg_spi->irq_lock = 1;
 		bg_irq_tasklet_hndlr_l();
 		bg_spi->irq_lock = 0;
@@ -656,6 +717,8 @@ static void bg_spi_init(struct bg_spi_priv *bg_spi)
 	/* BGCOM IRQ set-up */
 	bg_com_drv = &bg_spi->lhandle;
 	bg_spi->irq_lock = 0;
+
+	spi_state = BGCOM_SPI_FREE;
 }
 
 static int bg_spi_probe(struct spi_device *spi)

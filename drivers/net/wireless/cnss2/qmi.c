@@ -22,12 +22,12 @@
 #define WLFW_SERVICE_INS_ID_V01		1
 #define WLFW_CLIENT_ID			0x4b4e454c
 #define MAX_BDF_FILE_NAME		11
-#define DEFAULT_BDF_FILE_NAME		"bdwlan.bin"
-#define BDF_FILE_NAME_PREFIX		"bdwlan.b"
+#define DEFAULT_BDF_FILE_NAME		"bdwlan.elf"
+#define BDF_FILE_NAME_PREFIX		"bdwlan.e"
 
 #ifdef CONFIG_CNSS2_DEBUG
 static unsigned int qmi_timeout = 10000;
-module_param(qmi_timeout, uint, S_IRUSR | S_IWUSR);
+module_param(qmi_timeout, uint, 0600);
 MODULE_PARM_DESC(qmi_timeout, "Timeout for QMI message in milliseconds");
 
 #define QMI_WLFW_TIMEOUT_MS		qmi_timeout
@@ -36,14 +36,19 @@ MODULE_PARM_DESC(qmi_timeout, "Timeout for QMI message in milliseconds");
 #endif
 
 static bool daemon_support;
-module_param(daemon_support, bool, S_IRUSR | S_IWUSR);
+module_param(daemon_support, bool, 0600);
 MODULE_PARM_DESC(daemon_support, "User space has cnss-daemon support or not");
 
 static bool bdf_bypass = true;
 #ifdef CONFIG_CNSS2_DEBUG
-module_param(bdf_bypass, bool, S_IRUSR | S_IWUSR);
+module_param(bdf_bypass, bool, 0600);
 MODULE_PARM_DESC(bdf_bypass, "If BDF is not found, send dummy BDF to FW");
 #endif
+
+enum cnss_bdf_type {
+	CNSS_BDF_BIN,
+	CNSS_BDF_ELF,
+};
 
 static void cnss_wlfw_clnt_notifier_work(struct work_struct *work)
 {
@@ -134,6 +139,12 @@ static int cnss_wlfw_host_cap_send_sync(struct cnss_plat_data *plat_priv)
 	req.daemon_support = daemon_support;
 
 	cnss_pr_dbg("daemon_support is %d\n", req.daemon_support);
+
+	req.wake_msi = cnss_get_wake_msi(plat_priv);
+	if (req.wake_msi) {
+		cnss_pr_dbg("WAKE MSI base data is %d\n", req.wake_msi);
+		req.wake_msi_valid = 1;
+	}
 
 	req_desc.max_msg_len = WLFW_HOST_CAP_REQ_MSG_V01_MAX_MSG_LEN;
 	req_desc.msg_id = QMI_WLFW_HOST_CAP_REQ_V01;
@@ -417,7 +428,7 @@ int cnss_wlfw_bdf_dnld_send_sync(struct cnss_plat_data *plat_priv)
 		goto out;
 	}
 
-	if (0xFF == plat_priv->board_info.board_id)
+	if (plat_priv->board_info.board_id == 0xFF)
 		snprintf(filename, sizeof(filename), DEFAULT_BDF_FILE_NAME);
 	else
 		snprintf(filename, sizeof(filename),
@@ -462,6 +473,8 @@ bypass_bdf:
 		req->seg_id_valid = 1;
 		req->data_valid = 1;
 		req->end_valid = 1;
+		req->bdf_type_valid = 1;
+		req->bdf_type = CNSS_BDF_ELF;
 
 		if (remaining > QMI_WLFW_MAX_DATA_SIZE_V01) {
 			req->data_len = QMI_WLFW_MAX_DATA_SIZE_V01;
@@ -673,8 +686,8 @@ out:
 }
 
 int cnss_wlfw_athdiag_read_send_sync(struct cnss_plat_data *plat_priv,
-				     uint32_t offset, uint32_t mem_type,
-				     uint32_t data_len, uint8_t *data)
+				     u32 offset, u32 mem_type,
+				     u32 data_len, u8 *data)
 {
 	struct wlfw_athdiag_read_req_msg_v01 req;
 	struct wlfw_athdiag_read_resp_msg_v01 *resp;
@@ -724,7 +737,7 @@ int cnss_wlfw_athdiag_read_send_sync(struct cnss_plat_data *plat_priv,
 		goto out;
 	}
 
-	if (!resp->data_valid || resp->data_len <= data_len) {
+	if (!resp->data_valid || resp->data_len != data_len) {
 		cnss_pr_err("athdiag read data is invalid, data_valid = %u, data_len = %u\n",
 			    resp->data_valid, resp->data_len);
 		ret = -EINVAL;
@@ -739,8 +752,8 @@ out:
 }
 
 int cnss_wlfw_athdiag_write_send_sync(struct cnss_plat_data *plat_priv,
-				      uint32_t offset, uint32_t mem_type,
-				      uint32_t data_len, uint8_t *data)
+				      u32 offset, u32 mem_type,
+				      u32 data_len, u8 *data)
 {
 	struct wlfw_athdiag_write_req_msg_v01 *req;
 	struct wlfw_athdiag_write_resp_msg_v01 resp;
@@ -797,7 +810,7 @@ out:
 }
 
 int cnss_wlfw_ini_send_sync(struct cnss_plat_data *plat_priv,
-			    uint8_t fw_log_mode)
+			    u8 fw_log_mode)
 {
 	int ret;
 	struct wlfw_ini_req_msg_v01 req;
@@ -958,8 +971,9 @@ int cnss_wlfw_server_exit(struct cnss_plat_data *plat_priv)
 	if (!plat_priv)
 		return -ENODEV;
 
-	clear_bit(CNSS_FW_READY, &plat_priv->driver_state);
-	clear_bit(CNSS_FW_MEM_READY, &plat_priv->driver_state);
+	qmi_handle_destroy(plat_priv->qmi_wlfw_clnt);
+	plat_priv->qmi_wlfw_clnt = NULL;
+
 	clear_bit(CNSS_QMI_WLFW_CONNECTED, &plat_priv->driver_state);
 
 	cnss_pr_info("QMI WLFW service disconnected, state: 0x%lx\n",

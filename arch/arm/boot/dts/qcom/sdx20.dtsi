@@ -98,7 +98,7 @@
 			< 1401600 >;
 	};
 
-	usb_detect {
+	usb_detect: qcom,gpio-usbdetect {
 		compatible = "qcom,gpio-usbdetect";
 		interrupt-parent = <&spmi_bus>;
 		interrupts = <0x0 0x0d 0x0>;
@@ -131,6 +131,9 @@
 
 &clock_gcc {
 	compatible = "qcom,gcc-sdx20";
+	reg = <0x1800000 0x80000>,
+		<0xb008018 0x44>;
+	reg-names = "cc_base", "apcs_base";
 };
 
 &clock_cpu  {
@@ -243,6 +246,9 @@
 	perst-gpio = <&tlmm_pinmux 61 0>;
 	wake-gpio = <&tlmm_pinmux 58 0>;
 
+	vreg-1.8-supply = <&pmd9650_l1>;
+	qcom,vreg-1.8-voltage-level = <1224000 1224000 0>;
+
 	qcom,pcie-phy-ver = <0x21>;
 };
 
@@ -336,8 +342,12 @@
 	wake-gpio = <&tlmm_pinmux 58 0>;
 	clkreq-gpio = <&tlmm_pinmux 60 0>;
 
+	vreg-1.8-supply = <&pmd9650_l1>;
+	qcom,vreg-1.8-voltage-level = <1224000 1224000 0>;
+
 	qcom,pcie-phy-ver = <5>;
 	qcom,pcie-perst-enum;
+	status = "disabled";
 };
 
 &cnss_pcie {
@@ -376,6 +386,7 @@
 	interrupts = <0 119 0>;
 	interrupt-names = "mhi-device-inta";
 	qcom,mhi-ifc-id = <0x030317cb>;
+	status = "disabled";
 };
 
 #include "sdx20-usb.dtsi"

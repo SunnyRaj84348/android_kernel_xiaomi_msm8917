@@ -1114,7 +1114,8 @@ send:
 		memset(&meta, 0, sizeof(meta));
 		meta.pkt_init_dst_ep_valid = true;
 		meta.pkt_init_dst_ep_remote = true;
-		meta.pkt_init_dst_ep = IPA_CLIENT_Q6_LAN_CONS;
+		meta.pkt_init_dst_ep =
+			ipa3_get_ep_mapping(IPA_CLIENT_Q6_WAN_CONS);
 		ret = ipa3_tx_dp(IPA_CLIENT_APPS_WAN_PROD, skb, &meta);
 	} else {
 		ret = ipa3_tx_dp(IPA_CLIENT_APPS_WAN_PROD, skb, NULL);
@@ -2633,6 +2634,9 @@ int rmnet_ipa3_set_data_quota(struct wan_ioctl_set_data_quota *data)
 	int index;
 	struct ipa_set_data_usage_quota_req_msg_v01 req;
 
+	/* prevent string buffer overflows */
+	data->interface_name[IFNAMSIZ-1] = '\0';
+
 	index = find_vchannel_name_index(data->interface_name);
 	IPAWANERR("iface name %s, quota %lu\n",
 		  data->interface_name,
@@ -3023,7 +3027,8 @@ static inline int rmnet_ipa3_delete_lan_client_info
 		/* Reset the client info before sending the message. */
 		memset(lan_client, 0, sizeof(struct ipa_lan_client));
 		lan_client->client_idx = -1;
-
+		/* Decrement the number of clients. */
+		rmnet_ipa3_ctx->tether_device[device_type].num_clients--;
 	}
 	return 0;
 }
@@ -3097,7 +3102,7 @@ int rmnet_ipa3_set_lan_client_info(
 
 	rmnet_ipa3_ctx->tether_device[data->device_type].num_clients++;
 
-	IPAWANDBG("Set the lan client info: %d, %d, %d\n",
+	IPAWANDBG("Set the lan client info: Id:%d, Source Pipe:%d, num:%d\n",
 		lan_client->client_idx,
 		rmnet_ipa3_ctx->tether_device[data->device_type].ul_src_pipe,
 		rmnet_ipa3_ctx->tether_device[data->device_type].num_clients);
@@ -3292,6 +3297,22 @@ int rmnet_ipa3_query_per_client_stats(
 
 	mutex_lock(&rmnet_ipa3_ctx->per_client_stats_guard);
 
+	/* Check if Source pipe is valid. */
+	if (rmnet_ipa3_ctx->tether_device
+		[data->device_type].ul_src_pipe == -1) {
+		IPAWANERR("Device not initialized: %d\n", data->device_type);
+		mutex_unlock(&rmnet_ipa3_ctx->per_client_stats_guard);
+		return -EINVAL;
+	}
+
+	/* Check if we have clients connected. */
+	if (rmnet_ipa3_ctx->tether_device[data->device_type].num_clients == 0) {
+		IPAWANERR("No clients connected: %d\n", data->device_type);
+		mutex_unlock(&rmnet_ipa3_ctx->per_client_stats_guard);
+		return -EINVAL;
+	}
+
+	/* Check if num_clients is valid. */
 	if (data->num_clients == 1) {
 		/* Check if the client info is valid.*/
 		lan_clnt_idx1 = rmnet_ipa3_get_lan_client_info(

@@ -156,6 +156,7 @@ dtb-$(CONFIG_ARCH_MDM9650) += mdm9650-sim.dtb \
 	mdm9650-nand-cdp.dtb \
 	mdm9650-emmc-mtp.dtb \
 	mdm9650-nand-mtp.dtb \
+	mdm9650-ttp.dtb \
 	mdm9650-nand-dualwifi-mtp.dtb \
 	mdm9650-v1.1-emmc-cdp.dtb \
 	mdm9650-v1.1-nand-cdp.dtb \
@@ -163,7 +164,9 @@ dtb-$(CONFIG_ARCH_MDM9650) += mdm9650-sim.dtb \
 	mdm9650-v1.1-nand-mtp.dtb \
 	mdm9650-v1.1-nand-dualwifi-mtp.dtb \
 	mdm9650-v1.1-nand-ccard.dtb \
-	mdm9650-v1.1-nand-ccard-v2.dtb
+	mdm9650-v1.1-nand-ccard-v2.dtb \
+	mdm9650-v1.1-emmc-pcie-ep-mtp.dtb \
+	mdm9650-v1.1-nand-pcie-ep-mtp.dtb
 
 dtb-$(CONFIG_ARCH_SDX20) += sdx20-emmc-cdp.dtb \
 	sdx20-emmc-mtp.dtb \
@@ -176,7 +179,11 @@ dtb-$(CONFIG_ARCH_SDX20) += sdx20-emmc-cdp.dtb \
 	sdx20-v2-nand-cdp.dtb \
 	sdx20-v2-nand-mtp.dtb \
 	sdx20-v2-nand-dualwifi-mtp.dtb \
-	sdx20-v2-nand-dualwifi-cdp.dtb
+	sdx20-v2-nand-dualwifi-cdp.dtb \
+	sdx20-emmc-pcie-ep-mtp.dtb \
+	sdx20-nand-pcie-ep-mtp.dtb \
+	sdx20-v2-emmc-pcie-ep-mtp.dtb \
+	sdx20-v2-nand-pcie-ep-mtp.dtb
 
 dtb-$(CONFIG_ARCH_MSM8937) += msm8937-rumi.dtb \
 	msm8937-pmi8950-cdp.dtb \
@@ -263,7 +270,8 @@ dtb-$(CONFIG_ARCH_MSM8953) += msm8953-sim.dtb \
 
 dtb-$(CONFIG_ARCH_SDM450) += sdm450-rcm.dtb \
 	sdm450-cdp.dtb \
-	sdm450-mtp.dtb
+	sdm450-mtp.dtb \
+	sdm450-qrd.dtb
 
 dtb-$(CONFIG_ARCH_MDM9607) += mdm9607-rumi.dtb \
 	mdm9607-cdp.dtb \
@@ -324,6 +332,7 @@ dtb-$(CONFIG_ARCH_MSM8909) += msm8909-pm8916-mtp.dtb \
 	apq8009-cdp-wcd9326-refboard.dtb \
 	apq8009-rcm-wcd9326-refboard.dtb \
 	apq8009-robot-refboard.dtb \
+	apq8009-robot-rome.dtb \
 	apq8009-mtp-drone.dtb \
 	msm8909-mtp.dtb \
 	msm8909-1gb-mtp.dtb

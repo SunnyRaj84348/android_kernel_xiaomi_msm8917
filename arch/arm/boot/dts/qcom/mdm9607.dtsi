@@ -1224,6 +1224,7 @@
 		qcom,vdd-restriction-temp = <5>;
 		qcom,vdd-restriction-temp-hysteresis = <10>;
 		vdd-dig-supply = <&mdm9607_s3_floor_level>;
+		qcom,therm-ddr-lm-info = <2 78 70>;
 
 		qcom,vdd-dig-rstr{
 			qcom,vdd-rstr-reg = "vdd-dig";
@@ -1665,13 +1666,10 @@
 			<0x7c56000 0x1000>,
 			<0x7c5c000 0x4000>;
 
-		#address-cells = <0>;
-		interrupt-parent = <&emac0>;
-		#interrupt-cells = <1>;
-		interrupts = <0 1>;
-		interrupt-map-mask = <0xffffffff>;
-		interrupt-map = <0 &intc 0 76 0
-				1 &tlmm_pinmux 30 0x8>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+		interrupts-extended = <&intc 0 76 0>,
+				      <&tlmm_pinmux 30 0x8>;
 		interrupt-names = "emac_core0_irq", "emac_wol_irq";
 
 		emac_vreg1-supply = <&mdm9607_l1>;

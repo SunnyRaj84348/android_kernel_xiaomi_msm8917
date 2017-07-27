@@ -136,7 +136,7 @@ int mdp3_ctrl_notify(struct mdp3_session_data *ses, int event)
 	return blocking_notifier_call_chain(&ses->notifier_head, event, ses);
 }
 
-static void mdp3_dispatch_dma_done(struct work_struct *work)
+static void mdp3_dispatch_dma_done(struct kthread_work *work)
 {
 	struct mdp3_session_data *session;
 	int cnt = 0;
@@ -247,6 +247,13 @@ static void mdp3_vsync_retire_work_handler(struct work_struct *work)
 	mdp3_vsync_retire_signal(mdp3_session->mfd, 1);
 }
 
+void mdp3_hist_intr_notify(struct mdp3_dma *dma)
+{
+	dma->hist_events++;
+	sysfs_notify_dirent(dma->hist_event_sd);
+	pr_debug("%s:: hist_events = %u\n", __func__, dma->hist_events);
+}
+
 void vsync_notify_handler(void *arg)
 {
 	struct mdp3_session_data *session = (struct mdp3_session_data *)arg;
@@ -259,7 +266,7 @@ void dma_done_notify_handler(void *arg)
 {
 	struct mdp3_session_data *session = (struct mdp3_session_data *)arg;
 	atomic_inc(&session->dma_done_cnt);
-	schedule_work(&session->dma_done_work);
+	queue_kthread_work(&session->worker, &session->dma_done_work);
 	complete_all(&session->dma_completion);
 }
 
@@ -392,6 +399,40 @@ static int mdp3_ctrl_blit_req(struct msm_fb_data_type *mfd, void __user *p)
 	return rc;
 }
 
+static ssize_t mdp3_bl_show_event(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct fb_info *fbi = dev_get_drvdata(dev);
+	struct msm_fb_data_type *mfd = (struct msm_fb_data_type *)fbi->par;
+	struct mdp3_session_data *mdp3_session = NULL;
+	int ret;
+
+	if (!mfd || !mfd->mdp.private1)
+		return -EAGAIN;
+
+	mdp3_session = (struct mdp3_session_data *)mfd->mdp.private1;
+	ret = scnprintf(buf, PAGE_SIZE, "%d\n", mdp3_session->bl_events);
+	return ret;
+}
+
+static ssize_t mdp3_hist_show_event(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct fb_info *fbi = dev_get_drvdata(dev);
+	struct msm_fb_data_type *mfd = (struct msm_fb_data_type *)fbi->par;
+	struct mdp3_session_data *mdp3_session = NULL;
+	struct mdp3_dma *dma = NULL;
+	int ret;
+
+	if (!mfd || !mfd->mdp.private1)
+		return -EAGAIN;
+
+	mdp3_session = (struct mdp3_session_data *)mfd->mdp.private1;
+	dma = (struct mdp3_dma *)mdp3_session->dma;
+	ret = scnprintf(buf, PAGE_SIZE, "%d\n", dma->hist_events);
+	return ret;
+}
+
 static ssize_t mdp3_vsync_show_event(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
@@ -479,6 +520,8 @@ static ssize_t mdp3_dyn_pu_store(struct device *dev,
 	return count;
 }
 
+static DEVICE_ATTR(hist_event, S_IRUGO, mdp3_hist_show_event, NULL);
+static DEVICE_ATTR(bl_event, S_IRUGO, mdp3_bl_show_event, NULL);
 static DEVICE_ATTR(vsync_event, S_IRUGO, mdp3_vsync_show_event, NULL);
 static DEVICE_ATTR(packpattern, S_IRUGO, mdp3_packpattern_show, NULL);
 static DEVICE_ATTR(dyn_pu, S_IRUGO | S_IWUSR | S_IWGRP, mdp3_dyn_pu_show,
@@ -487,6 +530,8 @@ static DEVICE_ATTR(dyn_pu, S_IRUGO | S_IWUSR | S_IWGRP, mdp3_dyn_pu_show,
 static struct attribute *generic_attrs[] = {
 	&dev_attr_packpattern.attr,
 	&dev_attr_dyn_pu.attr,
+	&dev_attr_hist_event.attr,
+	&dev_attr_bl_event.attr,
 	NULL,
 };
 
@@ -1441,9 +1486,9 @@ static int mdp3_ctrl_display_commit_kickoff(struct msm_fb_data_type *mfd,
 
 	if (mdp3_session->first_commit) {
 		/*wait to ensure frame is sent to panel*/
-		if (panel_info->mipi.init_delay)
+		if (panel_info->mipi.post_init_delay)
 			msleep(((1000 / panel_info->mipi.frame_rate) + 1) *
-					panel_info->mipi.init_delay);
+					panel_info->mipi.post_init_delay);
 		else
 			msleep(1000 / panel_info->mipi.frame_rate);
 		mdp3_session->first_commit = false;
@@ -2773,6 +2818,7 @@ int mdp3_ctrl_init(struct msm_fb_data_type *mfd)
 	u32 intf_type = MDP3_DMA_OUTPUT_SEL_DSI_VIDEO;
 	int rc;
 	int splash_mismatch = 0;
+	struct sched_param sched = { .sched_priority = 16 };
 
 	pr_info("mdp3_ctrl_init\n");
 	rc = mdp3_parse_dt_splash(mfd);
@@ -2798,7 +2844,21 @@ int mdp3_ctrl_init(struct msm_fb_data_type *mfd)
 	}
 	mutex_init(&mdp3_session->lock);
 	INIT_WORK(&mdp3_session->clk_off_work, mdp3_dispatch_clk_off);
-	INIT_WORK(&mdp3_session->dma_done_work, mdp3_dispatch_dma_done);
+
+	init_kthread_worker(&mdp3_session->worker);
+	init_kthread_work(&mdp3_session->dma_done_work, mdp3_dispatch_dma_done);
+
+	mdp3_session->thread = kthread_run(kthread_worker_fn, &mdp3_session->worker,
+					   "mdp3_dispatch_dma_done");
+
+	if (IS_ERR(mdp3_session->thread)) {
+		pr_err("Can't initialize mdp3_dispatch_dma_done thread\n");
+		rc = -ENODEV;
+		goto init_done;
+	}
+
+	sched_setscheduler(mdp3_session->thread, SCHED_FIFO, &sched);
+
 	atomic_set(&mdp3_session->vsync_countdown, 0);
 	mutex_init(&mdp3_session->histo_lock);
 	mdp3_session->dma = mdp3_get_dma_pipe(MDP3_DMA_CAP_ALL);
@@ -2860,6 +2920,22 @@ int mdp3_ctrl_init(struct msm_fb_data_type *mfd)
 							"vsync_event");
 	if (!mdp3_session->vsync_event_sd) {
 		pr_err("vsync_event sysfs lookup failed\n");
+		rc = -ENODEV;
+		goto init_done;
+	}
+
+	mdp3_session->dma->hist_event_sd = sysfs_get_dirent(dev->kobj.sd,
+							"hist_event");
+	if (!mdp3_session->dma->hist_event_sd) {
+		pr_err("hist_event sysfs lookup failed\n");
+		rc = -ENODEV;
+		goto init_done;
+	}
+
+	mdp3_session->bl_event_sd = sysfs_get_dirent(dev->kobj.sd,
+							"bl_event");
+	if (!mdp3_session->bl_event_sd) {
+		pr_err("bl_event sysfs lookup failed\n");
 		rc = -ENODEV;
 		goto init_done;
 	}

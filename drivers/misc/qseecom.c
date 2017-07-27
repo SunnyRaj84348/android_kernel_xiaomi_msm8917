@@ -1246,7 +1246,7 @@ static int qseecom_unregister_listener(struct qseecom_dev_handle *data)
 				atomic_read(&data->ioctl_count) <= 1)) {
 			pr_err("Interrupted from abort\n");
 			ret = -ERESTARTSYS;
-			break;
+			return ret;
 		}
 	}
 
@@ -4363,9 +4363,9 @@ int qseecom_start_app(struct qseecom_handle **handle,
 		return -EINVAL;
 	}
 
-	if (strlen(app_name) >= MAX_APP_NAME_SIZE) {
+	if (strnlen(app_name, MAX_APP_NAME_SIZE) == MAX_APP_NAME_SIZE) {
 		pr_err("The app_name (%s) with length %zu is not valid\n",
-			app_name, strlen(app_name));
+			app_name, strnlen(app_name, MAX_APP_NAME_SIZE));
 		return -EINVAL;
 	}
 

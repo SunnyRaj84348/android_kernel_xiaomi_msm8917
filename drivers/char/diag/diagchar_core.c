@@ -22,6 +22,8 @@
 #include <linux/sched.h>
 #include <linux/ratelimit.h>
 #include <linux/timer.h>
+#include <linux/platform_device.h>
+#include <linux/msm_mhi.h>
 #ifdef CONFIG_DIAG_OVER_USB
 #include <linux/usb/usbdiag.h>
 #endif
@@ -712,6 +714,11 @@ struct diag_cmd_reg_entry_t *diag_cmd_search(
 
 	list_for_each_safe(start, temp, &driver->cmd_reg_list) {
 		item = list_entry(start, struct diag_cmd_reg_t, link);
+		if (&item->entry == NULL) {
+			pr_err("diag: In %s, unable to search command\n",
+			       __func__);
+			return NULL;
+		}
 		temp_entry = &item->entry;
 		if (temp_entry->cmd_code == entry->cmd_code &&
 		    temp_entry->subsys_id == entry->subsys_id &&
@@ -964,6 +971,11 @@ static int diag_send_raw_data_remote(int proc, void *buf, int len,
 	else
 		hdlc_disabled = driver->hdlc_disabled;
 	if (hdlc_disabled) {
+		if (len < 4) {
+			pr_err("diag: In %s, invalid len: %d of non_hdlc pkt",
+			__func__, len);
+			return -EBADMSG;
+		}
 		payload = *(uint16_t *)(buf + 2);
 		if (payload > DIAG_MAX_HDLC_BUF_SIZE) {
 			pr_err("diag: Dropping packet, payload size is %d\n",
@@ -972,11 +984,21 @@ static int diag_send_raw_data_remote(int proc, void *buf, int len,
 		}
 		driver->hdlc_encode_buf_len = payload;
 		/*
-		 * Adding 4 bytes for start (1 byte), version (1 byte) and
-		 * payload (2 bytes)
+		 * Adding 5 bytes for start (1 byte), version (1 byte),
+		 * payload (2 bytes) and end (1 byte)
 		 */
-		memcpy(driver->hdlc_encode_buf, buf + 4, payload);
-		goto send_data;
+		if (len == (payload + 5)) {
+			/*
+			 * Adding 4 bytes for start (1 byte), version (1 byte)
+			 * and payload (2 bytes)
+			 */
+			memcpy(driver->hdlc_encode_buf, buf + 4, payload);
+			goto send_data;
+		} else {
+			pr_err("diag: In %s, invalid len: %d of non_hdlc pkt",
+			__func__, len);
+			return -EBADMSG;
+		}
 	}
 
 	if (hdlc_flag) {
@@ -3360,6 +3382,41 @@ static int diagchar_cleanup(void)
 	return 0;
 }
 
+static int diag_mhi_probe(struct platform_device *pdev)
+{
+	int ret;
+
+	if (!mhi_is_device_ready(&pdev->dev, "qcom,mhi"))
+		return -EPROBE_DEFER;
+	driver->pdev = pdev;
+	ret = diag_remote_init();
+	if (ret) {
+		diag_remote_exit();
+		return ret;
+	}
+	ret = diagfwd_bridge_init();
+	if (ret) {
+		diagfwd_bridge_exit();
+		return ret;
+	}
+	pr_debug("diag: mhi device is ready\n");
+	return 0;
+}
+
+static const struct of_device_id diag_mhi_table[] = {
+	{.compatible = "qcom,diag-mhi"},
+	{},
+};
+
+static struct platform_driver diag_mhi_driver = {
+	.probe = diag_mhi_probe,
+	.driver = {
+		.name = "DIAG MHI Platform",
+		.owner = THIS_MODULE,
+		.of_match_table = diag_mhi_table,
+	},
+};
+
 static int __init diagchar_init(void)
 {
 	dev_t dev;
@@ -3411,6 +3468,7 @@ static int __init diagchar_init(void)
 	mutex_init(&driver->delayed_rsp_mutex);
 	mutex_init(&apps_data_mutex);
 	mutex_init(&driver->msg_mask_lock);
+	mutex_init(&driver->hdlc_recovery_mutex);
 	for (i = 0; i < NUM_PERIPHERALS; i++)
 		mutex_init(&driver->diagfwd_channel_mutex[i]);
 	init_waitqueue_head(&driver->wait_q);
@@ -3441,9 +3499,6 @@ static int __init diagchar_init(void)
 	if (ret)
 		goto fail;
 	ret = diag_masks_init();
-	if (ret)
-		goto fail;
-	ret = diag_remote_init();
 	if (ret)
 		goto fail;
 	ret = diag_mux_init();
@@ -3482,9 +3537,7 @@ static int __init diagchar_init(void)
 		goto fail;
 
 	pr_debug("diagchar initialized now");
-	ret = diagfwd_bridge_init();
-	if (ret)
-		diagfwd_bridge_exit();
+	platform_driver_register(&diag_mhi_driver);
 	return 0;
 
 fail:
@@ -3498,9 +3551,7 @@ fail:
 	diagfwd_cntl_exit();
 	diag_dci_exit();
 	diag_masks_exit();
-	diag_remote_exit();
 	return -1;
-
 }
 
 static void diagchar_exit(void)

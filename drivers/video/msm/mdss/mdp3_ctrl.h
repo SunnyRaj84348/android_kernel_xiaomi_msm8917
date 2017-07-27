@@ -1,4 +1,4 @@
-/* Copyright (c) 2013-2014, 2016, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2013-2014, 2016-2017 The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -18,6 +18,7 @@
 #include <linux/mutex.h>
 #include <linux/completion.h>
 #include <linux/timer.h>
+#include <linux/kthread.h>
 
 #include "mdp3.h"
 #include "mdp3_dma.h"
@@ -46,12 +47,17 @@ struct mdp3_session_data {
 	struct timer_list vsync_timer;
 	int vsync_period;
 	struct kernfs_node *vsync_event_sd;
+	struct kernfs_node *bl_event_sd;
 	struct mdp_overlay overlay;
 	struct mdp_overlay req_overlay;
 	struct mdp3_buffer_queue bufq_in;
 	struct mdp3_buffer_queue bufq_out;
 	struct work_struct clk_off_work;
-	struct work_struct dma_done_work;
+
+	struct kthread_work dma_done_work;
+	struct kthread_worker worker;
+	struct task_struct *thread;
+
 	atomic_t dma_done_cnt;
 	int histo_status;
 	struct mutex histo_lock;
@@ -66,6 +72,7 @@ struct mdp3_session_data {
 	bool in_splash_screen;
 	bool esd_recovery;
 	int dyn_pu_state; /* dynamic partial update status */
+	u32 bl_events;
 
 	bool dma_active;
 	struct completion dma_completion;

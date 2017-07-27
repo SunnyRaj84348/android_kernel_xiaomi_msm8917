@@ -11,11 +11,15 @@
  * GNU General Public License for more details.
  */
 
-#include "msm-pm660.dtsi"
-#include "msm-pm660-rpm-regulator.dtsi"
-#include "msm8909w-pm660-regulator.dtsi"
-
 &soc {
+	qcom,csid@1b08000 {
+		/delete-property/ qcom,mipi-csi-vdd-supply;
+	};
+
+	qcom,csid@1b08400 {
+		/delete-property/ qcom,mipi-csi-vdd-supply;
+	};
+
 	i2c@78b9000 {
 		synaptics@20 {
 			/delete-property/ avdd-supply;
@@ -23,40 +27,29 @@
 		};
 	};
 
-	qcom,gcc@1800000 {
-		vdd_dig-supply = <&pm660_s2_corner>;
-		vdd_sr2_dig-supply = <&pm660_s2_corner_ao>;
-		vdd_sr2_pll-supply = <&pm660_l12_ao>;
-
-	};
-
 	qcom,wcnss-wlan@a000000 {
-		/delete-property/ qcom,pronto-vddmx-supply;
-		/delete-property/ qcom,pronto-vddcx-supply;
-		/delete-property/ qcom,pronto-vddpx-supply;
-		/delete-property/ qcom,iris-vddxo-supply;
-		/delete-property/ qcom,iris-vddrfa-supply;
+		/delete-property/ qcom,iris-vddpa-voltage-level;
 		/delete-property/ qcom,iris-vddpa-supply;
-		/delete-property/ qcom,iris-vdddig-supply;
 		/delete-property/ qcom,wcnss-adc_tm;
-	};
-
-	usb@78d9000 {
-		hsusb_vdd_dig-supply = <&pm660_l5>;
-		HSUSB_1p8-supply = <&pm660_l12>;
-		HSUSB_3p3-supply = <&pm660_l16>;
-		qcom,hsusb-otg-mode = <1>; /* DEVICE only */
-		qcom,hsusb-otg-otg-control = <3>; /* USER */
+		/delete-property/ qcom,is-dual-band-disabled;
+		/delete-property/ qcom,iris-vddpa-current;
+		qcom,pronto-vddmx-supply = <&pm660_s2_corner_ao>;
+		qcom,pronto-vddcx-supply = <&pm660_s3_corner>;
+		qcom,pronto-vddpx-supply = <&pm660_l13>;
+		qcom,iris-vddxo-supply   = <&pm660_l12>;
+		qcom,iris-vddrfa-supply  = <&pm660_l6>;
+		qcom,iris-vdddig-supply  = <&pm660_l13>;
+		qcom,wcn-external-gpio-support;
 	};
 
 	qcom,pronto@a21b000 {
-		/delete-property/ vdd_pronto_pll-supply;
+		vdd_pronto_pll-supply = <&pm660_l12>;
 	};
 
 	qcom,mss@4080000 {
-		/delete-property/ vdd_cx-supply;
-		/delete-property/ vdd_mx-supply;
-		/delete-property/ vdd_pll-supply;
+		vdd_cx-supply = <&pm660_s2_corner>;
+		vdd_mx-supply = <&pm660_s3_corner_ao>;
+		vdd_pll-supply = <&pm660_l12>;
 	};
 
 	tpiu@820000 {
@@ -86,10 +79,6 @@
 		/delete-property/ vdd-dig-supply;
 	};
 
-	qcom,clock-a7@0b011050 {
-		cpu-vdd-supply = <&apc_vreg_corner>;
-	};
-
 	vadc@3400 {
 		/delete-property/ qcom,adc_tm-vadc;
 		/delete-property/ qcom,pmic-revid;
@@ -104,13 +93,40 @@
 	};
 };
 
-&audio_codec_mtp {
-	/delete-property/ asoc-codec;
+&i2c_1 {
+	mpu6050@68 {
+		/delete-property/ vdd-supply;
+		/delete-property/ vlogic-supply;
+	};
 };
 
-&sdhc_1 {
-	vdd-supply = <&pm660_l19>;
-	vdd-io-supply = <&pm660_l13>;
+&i2c_3 {
+	qcom,actuator@0 {
+		/delete-property/ cam_vaf-supply;
+	};
+
+	qcom,eeprom@6c {
+		/delete-property/ cam_vdig-supply;
+		/delete-property/ cam_vana-supply;
+		/delete-property/ cam_vio-supply;
+		/delete-property/ cam_vaf-supply;
+	};
+
+	qcom,camera@0 {
+		/delete-property/ cam_vdig-supply;
+		/delete-property/ cam_vana-supply;
+		/delete-property/ cam_vio-supply;
+		/delete-property/ cam_vaf-supply;
+	};
+
+	qcom,camera@1 {
+		/delete-property/ cam_vana-supply;
+		/delete-property/ cam_vio-supply;
+	};
+};
+
+&audio_codec_mtp {
+	/delete-property/ asoc-codec;
 };
 
 &sdhc_2 {
@@ -135,4 +151,47 @@
 
 &dsi_hx8394d_qhd_vid {
 	/delete-property/ qcom,mdss-dsi-pwm-gpio;
+};
+
+&soc {
+	/delete-node/ qcom,rpm-smd;
+	rpm_bus: qcom,rpm-smd {
+		compatible = "qcom,rpm-smd";
+		rpm-channel-name = "rpm_requests";
+		rpm-channel-type = <15>;
+	};
+};
+
+#include "msm-pm660.dtsi"
+#include "msm-pm660-rpm-regulator.dtsi"
+#include "msm8909w-pm660-regulator.dtsi"
+
+&soc {
+	qcom,gcc@1800000 {
+		vdd_dig-supply = <&pm660_s2_corner>;
+		vdd_sr2_dig-supply = <&pm660_s2_corner_ao>;
+		vdd_sr2_pll-supply = <&pm660_l12_ao>;
+
+	};
+
+	usb@78d9000 {
+		hsusb_vdd_dig-supply = <&pm660_l5>;
+		HSUSB_1p8-supply = <&pm660_l12>;
+		HSUSB_3p3-supply = <&pm660_l16>;
+		qcom,hsusb-otg-mode = <1>; /* DEVICE only */
+		qcom,hsusb-otg-otg-control = <3>; /* USER */
+	};
+
+	qcom,clock-a7@0b011050 {
+		cpu-vdd-supply = <&apc_vreg_corner>;
+	};
+};
+
+&sdhc_1 {
+	vdd-supply = <&pm660_l19>;
+	vdd-io-supply = <&pm660_l13>;
+};
+
+&pm660_haptics {
+	qcom,actuator-type = "erm";
 };
