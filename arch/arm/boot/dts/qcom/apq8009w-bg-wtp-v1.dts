@@ -112,6 +112,13 @@
 			qcom,glinkpkt-ch-name = "display-ctrl";
 			qcom,glinkpkt-dev-name = "glink_pkt_bg_display_ctrl";
 		};
+
+		qcom,glinkpkt-bg-display-data {
+			qcom,glinkpkt-transport = "bgcom";
+			qcom,glinkpkt-edge = "bg";
+			qcom,glinkpkt-ch-name = "display-data";
+			qcom,glinkpkt-dev-name = "glink_pkt_bg_display_data";
+		};
 	};
 };
 
@@ -141,6 +148,7 @@
 {
 	spi@78b6000 { /* BLSP1 QUP2 */
 		status = "ok";
+		qcom,shared;
 		qcom,bg-spi {
 			compatible = "qcom,bg-spi";
 			reg = <0>;

@@ -1607,7 +1607,7 @@ int ipa3_cfg_route(struct ipahal_reg_route *route)
  */
 int ipa3_cfg_filter(u32 disable)
 {
-	IPAERR("Filter disable is not supported!\n");
+	IPAERR_RL("Filter disable is not supported!\n");
 	return -EPERM;
 }
 
@@ -1714,7 +1714,7 @@ int ipa3_get_ep_mapping(enum ipa_client_type client)
 	int ipa_ep_idx;
 
 	if (client >= IPA_CLIENT_MAX || client < 0) {
-		IPAERR("Bad client number! client =%d\n", client);
+		IPAERR_RL("Bad client number! client =%d\n", client);
 		return IPA_EP_NOT_ALLOCATED;
 	}
 
@@ -2332,6 +2332,19 @@ static int ipa3_generate_hw_rule_ip4(u16 *en_rule,
 		ihl_ofst_meq32 += 2;
 	}
 
+	if (attrib->attrib_mask & IPA_FLT_TCP_SYN) {
+		if (ipa_ihl_ofst_meq32[ihl_ofst_meq32] == -1) {
+			IPAERR("ran out of ihl_meq32 eq\n");
+			goto err;
+		}
+		*en_rule |= ipa_ihl_ofst_meq32[ihl_ofst_meq32];
+		/* 12  => offset of SYN after v4 header */
+		extra = ipa3_write_8(12, extra);
+		rest = ipa3_write_32(0x20000, rest);
+		rest = ipa3_write_32(0x20000, rest);
+		ihl_ofst_meq32++;
+	}
+
 	if (attrib->attrib_mask & IPA_FLT_META_DATA) {
 		*en_rule |= IPA_METADATA_COMPARE;
 		rest = ipa3_write_32(attrib->meta_data_mask, rest);
@@ -2653,6 +2666,52 @@ static int ipa3_generate_hw_rule_ip6(u16 *en_rule,
 		ihl_ofst_meq32 += 2;
 	}
 
+	if (attrib->attrib_mask & IPA_FLT_TCP_SYN) {
+		if (ipa_ihl_ofst_meq32[ihl_ofst_meq32] == -1) {
+			IPAERR("ran out of ihl_meq32 eq\n");
+			goto err;
+		}
+		*en_rule |= ipa_ihl_ofst_meq32[ihl_ofst_meq32];
+		/* 12  => offset of SYN after v6 header */
+		extra = ipa3_write_8(12, extra);
+		rest = ipa3_write_32(0x20000, rest);
+		rest = ipa3_write_32(0x20000, rest);
+		ihl_ofst_meq32++;
+	}
+
+	if (attrib->attrib_mask & IPA_FLT_TCP_SYN_L2TP) {
+		if (ipa_ihl_ofst_meq32[ihl_ofst_meq32] == -1 ||
+			ipa_ihl_ofst_meq32[ihl_ofst_meq32 + 1] == -1) {
+			IPAERR("ran out of ihl meq32 eq\n");
+			goto err;
+		}
+		*en_rule |= ipa_ihl_ofst_meq32[ihl_ofst_meq32];
+		*en_rule |= ipa_ihl_ofst_meq32[ihl_ofst_meq32 + 1];
+
+		/* populate TCP protocol eq */
+		if (attrib->ether_type == 0x0800) {
+			extra = ipa3_write_8(30, extra);
+			rest = ipa3_write_32(0xFF0000, rest);
+			rest = ipa3_write_32(0x60000, rest);
+		} else {
+			extra = ipa3_write_8(26, extra);
+			rest = ipa3_write_32(0xFF00, rest);
+			rest = ipa3_write_32(0x600, rest);
+		}
+
+		/* populate TCP SYN eq */
+		if (attrib->ether_type == 0x0800) {
+			extra = ipa3_write_8(54, extra);
+			rest = ipa3_write_32(0x20000, rest);
+			rest = ipa3_write_32(0x20000, rest);
+		} else {
+			extra = ipa3_write_8(74, extra);
+			rest = ipa3_write_32(0x20000, rest);
+			rest = ipa3_write_32(0x20000, rest);
+		}
+		ihl_ofst_meq32 += 2;
+	}
+
 	if (attrib->attrib_mask & IPA_FLT_META_DATA) {
 		*en_rule |= IPA_METADATA_COMPARE;
 		rest = ipa3_write_32(attrib->meta_data_mask, rest);
@@ -2716,6 +2775,25 @@ static int ipa3_generate_hw_rule_ip6(u16 *en_rule,
 		extra = ipa3_write_8(2, extra);
 		rest = ipa3_write_16(attrib->dst_port_hi, rest);
 		rest = ipa3_write_16(attrib->dst_port_lo, rest);
+		ihl_ofst_rng16++;
+	}
+
+	if (attrib->attrib_mask & IPA_FLT_TCP_SYN_L2TP) {
+		if (ipa_ihl_ofst_rng16[ihl_ofst_rng16] == -1) {
+			IPAERR("ran out of ihl_rng16 eq\n");
+			goto err;
+		}
+		*en_rule |= ipa_ihl_ofst_rng16[ihl_ofst_rng16];
+
+		if (attrib->ether_type == 0x0800) {
+			extra = ipa3_write_8(21, extra);
+			rest = ipa3_write_16(0x0045, rest);
+			rest = ipa3_write_16(0x0045, rest);
+		} else {
+			extra = ipa3_write_8(20, extra);
+			rest = ipa3_write_16(attrib->ether_type, rest);
+			rest = ipa3_write_16(attrib->ether_type, rest);
+		}
 		ihl_ofst_rng16++;
 	}
 
@@ -3009,6 +3087,19 @@ int ipa3_generate_flt_eq_ip4(enum ipa_ip_type ip,
 			((attrib->dst_mac_addr[5] << 16) & 0xFF0000) |
 			((attrib->dst_mac_addr[4] << 24) & 0xFF000000);
 		ihl_ofst_meq32 += 2;
+	}
+
+	if (attrib->attrib_mask & IPA_FLT_TCP_SYN) {
+		if (ipa_ihl_ofst_meq32[ihl_ofst_meq32] == -1) {
+			IPAERR("ran out of ihl_meq32 eq\n");
+			return -EPERM;
+		}
+		*en_rule |= ipa_ihl_ofst_meq32[ihl_ofst_meq32];
+		/* 12  => offset of SYN after v4 header */
+		eq_atrb->ihl_offset_meq_32[ihl_ofst_meq32].offset = 12;
+		eq_atrb->ihl_offset_meq_32[ihl_ofst_meq32].mask = 0x20000;
+		eq_atrb->ihl_offset_meq_32[ihl_ofst_meq32].value = 0x20000;
+		ihl_ofst_meq32++;
 	}
 
 	if (attrib->attrib_mask & IPA_FLT_TOS_MASKED) {
@@ -3386,6 +3477,60 @@ int ipa3_generate_flt_eq_ip6(enum ipa_ip_type ip,
 		ihl_ofst_meq32 += 2;
 	}
 
+	if (attrib->attrib_mask & IPA_FLT_TCP_SYN) {
+		if (ipa_ihl_ofst_meq32[ihl_ofst_meq32] == -1) {
+			IPAERR("ran out of ihl_meq32 eq\n");
+			return -EPERM;
+		}
+		*en_rule |= ipa_ihl_ofst_meq32[ihl_ofst_meq32];
+		/* 12  => offset of SYN after v4 header */
+		eq_atrb->ihl_offset_meq_32[ihl_ofst_meq32].offset = 12;
+		eq_atrb->ihl_offset_meq_32[ihl_ofst_meq32].mask = 0x20000;
+		eq_atrb->ihl_offset_meq_32[ihl_ofst_meq32].value = 0x20000;
+		ihl_ofst_meq32++;
+	}
+
+	if (attrib->attrib_mask & IPA_FLT_TCP_SYN_L2TP) {
+		if (ipa_ihl_ofst_meq32[ihl_ofst_meq32] == -1 ||
+			ipa_ihl_ofst_meq32[ihl_ofst_meq32 + 1] == -1) {
+			IPAERR("ran out of ihl meq32 eq\n");
+			return -EPERM;
+		}
+		*en_rule |= ipa_ihl_ofst_meq32[ihl_ofst_meq32];
+		*en_rule |= ipa_ihl_ofst_meq32[ihl_ofst_meq32 + 1];
+
+		/* populate TCP protocol eq */
+		if (attrib->ether_type == 0x0800) {
+			eq_atrb->ihl_offset_meq_32[ihl_ofst_meq32].offset = 30;
+			eq_atrb->ihl_offset_meq_32[ihl_ofst_meq32].mask =
+				0xFF0000;
+			eq_atrb->ihl_offset_meq_32[ihl_ofst_meq32].value =
+				0x60000;
+		} else {
+			eq_atrb->ihl_offset_meq_32[ihl_ofst_meq32].offset = 26;
+			eq_atrb->ihl_offset_meq_32[ihl_ofst_meq32].mask =
+				0xFF00;
+			eq_atrb->ihl_offset_meq_32[ihl_ofst_meq32].value =
+				0x600;
+		}
+
+		/* populate TCP SYN eq */
+		if (attrib->ether_type == 0x0800) {
+			eq_atrb->ihl_offset_meq_32[ihl_ofst_meq32].offset = 54;
+			eq_atrb->ihl_offset_meq_32[ihl_ofst_meq32].mask =
+				0x20000;
+			eq_atrb->ihl_offset_meq_32[ihl_ofst_meq32].value =
+				0x20000;
+		} else {
+			eq_atrb->ihl_offset_meq_32[ihl_ofst_meq32].offset = 74;
+			eq_atrb->ihl_offset_meq_32[ihl_ofst_meq32].mask =
+				0x20000;
+			eq_atrb->ihl_offset_meq_32[ihl_ofst_meq32].value =
+				0x20000;
+		}
+		ihl_ofst_meq32 += 2;
+	}
+
 	if (attrib->attrib_mask & IPA_FLT_MAC_ETHER_TYPE) {
 		if (ipa_ofst_meq32[ofst_meq32] == -1) {
 			IPAERR("ran out of meq128 eq\n");
@@ -3509,6 +3654,31 @@ int ipa3_generate_flt_eq_ip6(enum ipa_ip_type ip,
 			= attrib->dst_port_lo;
 		eq_atrb->ihl_offset_range_16[ihl_ofst_rng16].range_high
 			= attrib->dst_port_hi;
+		ihl_ofst_rng16++;
+	}
+
+	if (attrib->attrib_mask & IPA_FLT_TCP_SYN_L2TP) {
+		if (ipa_ihl_ofst_rng16[ihl_ofst_rng16] == -1) {
+			IPAERR("ran out of ihl_rng16 eq\n");
+			return -EPERM;
+		}
+
+		*en_rule |= ipa_ihl_ofst_rng16[ihl_ofst_rng16];
+		if (attrib->ether_type == 0x0800) {
+			eq_atrb->ihl_offset_range_16[ihl_ofst_rng16].offset
+				= 21;
+			eq_atrb->ihl_offset_range_16[ihl_ofst_rng16].range_low
+				= 0x0045;
+			eq_atrb->ihl_offset_range_16[ihl_ofst_rng16].range_high
+				= 0x0045;
+		} else {
+			eq_atrb->ihl_offset_range_16[ihl_ofst_rng16].offset =
+				20;
+			eq_atrb->ihl_offset_range_16[ihl_ofst_rng16].range_low
+				= attrib->ether_type;
+			eq_atrb->ihl_offset_range_16[ihl_ofst_rng16].range_high
+				= attrib->ether_type;
+		}
 		ihl_ofst_rng16++;
 	}
 
@@ -4396,19 +4566,19 @@ int ipa3_write_qmap_id(struct ipa_ioc_write_qmapid *param_in)
 	int result = -EINVAL;
 
 	if (param_in->client  >= IPA_CLIENT_MAX) {
-		IPAERR("bad parm client:%d\n", param_in->client);
+		IPAERR_RL("bad parm client:%d\n", param_in->client);
 		goto fail;
 	}
 
 	ipa_ep_idx = ipa3_get_ep_mapping(param_in->client);
 	if (ipa_ep_idx == -1) {
-		IPAERR("Invalid client.\n");
+		IPAERR_RL("Invalid client.\n");
 		goto fail;
 	}
 
 	ep = &ipa3_ctx->ep[ipa_ep_idx];
 	if (!ep->valid) {
-		IPAERR("EP not allocated.\n");
+		IPAERR_RL("EP not allocated.\n");
 		goto fail;
 	}
 
@@ -4422,7 +4592,7 @@ int ipa3_write_qmap_id(struct ipa_ioc_write_qmapid *param_in)
 		ipa3_ctx->ep[ipa_ep_idx].cfg.meta = meta;
 		result = ipa3_write_qmapid_wdi_pipe(ipa_ep_idx, meta.qmap_id);
 		if (result)
-			IPAERR("qmap_id %d write failed on ep=%d\n",
+			IPAERR_RL("qmap_id %d write failed on ep=%d\n",
 					meta.qmap_id, ipa_ep_idx);
 		result = 0;
 	}
@@ -5435,7 +5605,7 @@ static int ipa3_tag_generate_force_close_desc(struct ipa3_desc desc[],
 			IPAHAL_FULL_PIPELINE_CLEAR;
 		reg_write_agg_close.offset =
 			ipahal_get_reg_ofst(IPA_AGGR_FORCE_CLOSE);
-		ipahal_get_aggr_force_close_valmask(1<<i, &valmask);
+		ipahal_get_aggr_force_close_valmask(i, &valmask);
 		reg_write_agg_close.value = valmask.val;
 		reg_write_agg_close.value_mask = valmask.mask;
 		cmd_pyld = ipahal_construct_imm_cmd(IPA_IMM_CMD_REGISTER_WRITE,
@@ -5830,6 +6000,7 @@ int ipa3_bind_api_controller(enum ipa_hw_type ipa_hw_type,
 	api_ctrl->ipa_create_wdi_mapping = ipa3_create_wdi_mapping;
 	api_ctrl->ipa_get_gsi_ep_info = ipa3_get_gsi_ep_info;
 	api_ctrl->ipa_stop_gsi_channel = ipa3_stop_gsi_channel;
+	api_ctrl->ipa_start_gsi_channel = ipa3_start_gsi_channel;
 	api_ctrl->ipa_register_ipa_ready_cb = ipa3_register_ipa_ready_cb;
 	api_ctrl->ipa_inc_client_enable_clks = ipa3_inc_client_enable_clks;
 	api_ctrl->ipa_dec_client_disable_clks = ipa3_dec_client_disable_clks;

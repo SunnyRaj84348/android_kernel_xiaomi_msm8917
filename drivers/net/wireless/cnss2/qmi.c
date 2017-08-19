@@ -39,7 +39,7 @@ static bool daemon_support;
 module_param(daemon_support, bool, 0600);
 MODULE_PARM_DESC(daemon_support, "User space has cnss-daemon support or not");
 
-static bool bdf_bypass = true;
+static bool bdf_bypass;
 #ifdef CONFIG_CNSS2_DEBUG
 module_param(bdf_bypass, bool, 0600);
 MODULE_PARM_DESC(bdf_bypass, "If BDF is not found, send dummy BDF to FW");
@@ -48,6 +48,30 @@ MODULE_PARM_DESC(bdf_bypass, "If BDF is not found, send dummy BDF to FW");
 enum cnss_bdf_type {
 	CNSS_BDF_BIN,
 	CNSS_BDF_ELF,
+};
+
+static char *cnss_qmi_mode_to_str(enum wlfw_driver_mode_enum_v01 mode)
+{
+	switch (mode) {
+	case QMI_WLFW_MISSION_V01:
+		return "MISSION";
+	case QMI_WLFW_FTM_V01:
+		return "FTM";
+	case QMI_WLFW_EPPING_V01:
+		return "EPPING";
+	case QMI_WLFW_WALTEST_V01:
+		return "WALTEST";
+	case QMI_WLFW_OFF_V01:
+		return "OFF";
+	case QMI_WLFW_CCPM_V01:
+		return "CCPM";
+	case QMI_WLFW_QVIT_V01:
+		return "QVIT";
+	case QMI_WLFW_CALIBRATION_V01:
+		return "CALIBRATION";
+	default:
+		return "UNKNOWN";
+	}
 };
 
 static void cnss_wlfw_clnt_notifier_work(struct work_struct *work)
@@ -585,8 +609,8 @@ int cnss_wlfw_wlan_mode_send_sync(struct cnss_plat_data *plat_priv,
 	if (!plat_priv)
 		return -ENODEV;
 
-	cnss_pr_dbg("Sending mode message, state: 0x%lx, mode: %d\n",
-		    plat_priv->driver_state, mode);
+	cnss_pr_dbg("Sending mode message, mode: %s(%d), state: 0x%lx\n",
+		    cnss_qmi_mode_to_str(mode), mode, plat_priv->driver_state);
 
 	if (mode == QMI_WLFW_OFF_V01 &&
 	    test_bit(CNSS_DRIVER_RECOVERY, &plat_priv->driver_state)) {
@@ -617,14 +641,15 @@ int cnss_wlfw_wlan_mode_send_sync(struct cnss_plat_data *plat_priv,
 			cnss_pr_dbg("WLFW service is disconnected while sending mode off request.\n");
 			return 0;
 		}
-		cnss_pr_err("Failed to send mode request, mode: %d, err = %d\n",
-			    mode, ret);
+		cnss_pr_err("Failed to send mode request, mode: %s(%d), err: %d\n",
+			    cnss_qmi_mode_to_str(mode), mode, ret);
 		goto out;
 	}
 
 	if (resp.resp.result != QMI_RESULT_SUCCESS_V01) {
-		cnss_pr_err("Mode request failed, mode: %d, result: %d err: %d\n",
-			    mode, resp.resp.result, resp.resp.error);
+		cnss_pr_err("Mode request failed, mode: %s(%d), result: %d, err: %d\n",
+			    cnss_qmi_mode_to_str(mode), mode, resp.resp.result,
+			    resp.resp.error);
 		ret = resp.resp.result;
 		goto out;
 	}

@@ -2545,6 +2545,7 @@ static void msm_chg_detect_work(struct work_struct *w)
 
 			motg->chg_state = USB_CHG_STATE_DETECTED;
 			delay = 0;
+			goto state_detected;
 		}
 		break;
 	case USB_CHG_STATE_PRIMARY_DONE:
@@ -2558,6 +2559,7 @@ static void msm_chg_detect_work(struct work_struct *w)
 	case USB_CHG_STATE_SECONDARY_DONE:
 		motg->chg_state = USB_CHG_STATE_DETECTED;
 	case USB_CHG_STATE_DETECTED:
+state_detected:
 		/*
 		 * Notify the charger type to power supply
 		 * owner as soon as we determine the charger.
@@ -3623,7 +3625,10 @@ static int otg_power_set_property_usb(struct power_supply *psy,
 				motg->chg_type, psy->type);
 		break;
 	case POWER_SUPPLY_PROP_HEALTH:
-		motg->usbin_health = val->intval;
+		if (val->intval > POWER_SUPPLY_HEALTH_HOT)
+			motg->usbin_health = 0;
+		else
+			motg->usbin_health = val->intval;
 		break;
 	default:
 		return -EINVAL;
