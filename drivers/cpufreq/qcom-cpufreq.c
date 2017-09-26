@@ -404,6 +404,7 @@ static struct cpufreq_frequency_table *cpufreq_parse_dt(struct device *dev,
 	if (!ftbl)
 		return ERR_PTR(-ENOMEM);
 
+	j = 0;
 	for (i = 0; i < nf; i++) {
 		unsigned long f;
 
