@@ -1,4 +1,4 @@
-/* Copyright (c) 2009-2014, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2017, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -25,10 +25,8 @@
 struct msm_led_flash_ctrl_t;
 
 struct msm_flash_fn_t {
-	int32_t (*flash_get_subdev_id)(struct msm_led_flash_ctrl_t *,
-		void __user *);
-	int32_t (*flash_led_config)(struct msm_led_flash_ctrl_t *,
-		void __user *);
+	int32_t (*flash_get_subdev_id)(struct msm_led_flash_ctrl_t *, void *);
+	int32_t (*flash_led_config)(struct msm_led_flash_ctrl_t *, void *);
 	int32_t (*flash_led_init)(struct msm_led_flash_ctrl_t *);
 	int32_t (*flash_led_release)(struct msm_led_flash_ctrl_t *);
 	int32_t (*flash_led_off)(struct msm_led_flash_ctrl_t *);
@@ -83,10 +81,10 @@ int32_t msm_led_flash_create_v4lsubdev(struct platform_device *pdev,
 int32_t msm_led_i2c_flash_create_v4lsubdev(void *data);
 
 int32_t msm_led_i2c_trigger_get_subdev_id(struct msm_led_flash_ctrl_t *fctrl,
-	void __user *arg);
+	void *arg);
 
 int32_t msm_led_i2c_trigger_config(struct msm_led_flash_ctrl_t *fctrl,
-	void __user *data);
+	void *data);
 
 int32_t msm_led_torch_create_classdev(struct platform_device *pdev,
 	void *data);

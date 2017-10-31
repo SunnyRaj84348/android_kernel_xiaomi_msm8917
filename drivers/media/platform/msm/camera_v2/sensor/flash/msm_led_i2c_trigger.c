@@ -1,4 +1,4 @@
-/* Copyright (c) 2013-2015, 2017, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2017, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -26,13 +26,13 @@
 #define CAM_FLASH_PINCTRL_STATE_DEFAULT "cam_flash_default"
 /*#define CONFIG_MSMB_CAMERA_DEBUG*/
 #undef CDBG
-#define CDBG(fmt, args...) pr_err(fmt, ##args)
+#define CDBG(fmt, args...) pr_debug(fmt, ##args)
 
 static void *g_fctrl;
 int32_t msm_led_i2c_trigger_get_subdev_id(struct msm_led_flash_ctrl_t *fctrl,
-	void __user *arg)
+	void *arg)
 {
-	uint32_t __user *subdev_id = (uint32_t __user *)arg;
+	uint32_t *subdev_id = (uint32_t *)arg;
 
 	if (!subdev_id) {
 		pr_err("failed\n");
@@ -45,12 +45,11 @@ int32_t msm_led_i2c_trigger_get_subdev_id(struct msm_led_flash_ctrl_t *fctrl,
 }
 
 int32_t msm_led_i2c_trigger_config(struct msm_led_flash_ctrl_t *fctrl,
-	void __user *data)
+	void *data)
 {
 	int rc = 0;
 	int i = 0;
-	struct msm_camera_led_cfg_t __user *cfg =
-		(struct msm_camera_led_cfg_t __user *)data;
+	struct msm_camera_led_cfg_t *cfg = (struct msm_camera_led_cfg_t *)data;
 
 	CDBG("called led_state %d\n", cfg->cfgtype);
 

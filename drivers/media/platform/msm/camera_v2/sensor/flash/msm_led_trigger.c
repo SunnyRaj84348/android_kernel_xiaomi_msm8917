@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2014,2017 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2017, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -25,9 +25,9 @@ static enum flash_type flashtype;
 static struct msm_led_flash_ctrl_t fctrl;
 
 static int32_t msm_led_trigger_get_subdev_id(struct msm_led_flash_ctrl_t *fctrl,
-	void __user *arg)
+	void *arg)
 {
-	uint32_t __user *subdev_id = (uint32_t __user *)arg;
+	uint32_t *subdev_id = (uint32_t *)arg;
 
 	if (!subdev_id) {
 		pr_err("%s:%d failed\n", __func__, __LINE__);
@@ -60,11 +60,10 @@ static int32_t msm_led_trigger_release(struct msm_led_flash_ctrl_t *fctrl)
 }
 
 static int32_t msm_led_trigger_config(struct msm_led_flash_ctrl_t *fctrl,
-	void __user *data)
+	void *data)
 {
 	int rc = 0;
-	struct msm_camera_led_cfg_t __user *cfg =
-		(struct msm_camera_led_cfg_t __user *)data;
+	struct msm_camera_led_cfg_t *cfg = (struct msm_camera_led_cfg_t *)data;
 	uint32_t i;
 	uint32_t curr_l, max_curr_l;
 

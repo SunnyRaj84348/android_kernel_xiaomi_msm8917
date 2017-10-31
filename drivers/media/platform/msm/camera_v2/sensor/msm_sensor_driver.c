@@ -929,6 +929,7 @@ CSID_TG:
 	s_ctrl->sensordata->eeprom_name = slave_info->eeprom_name;
 	s_ctrl->sensordata->actuator_name = slave_info->actuator_name;
 	s_ctrl->sensordata->ois_name = slave_info->ois_name;
+	s_ctrl->sensordata->flash_name = slave_info->flash_name;
 	/*
 	 * Update eeporm subdevice Id by input eeprom name
 	 */
