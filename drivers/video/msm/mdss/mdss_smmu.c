@@ -468,6 +468,16 @@ end:
 	return -ENOSYS;
 }
 
+#ifdef TARGET_HW_MDSS_MDP3
+static int mdp3_iommu_fault_handler(struct iommu_domain *domain,
+	struct device *dev, unsigned long iova, int flags, void *token)
+{
+	MDSS_XLOG(0x9999);
+	/* place holder for additional error handling */
+	return 0;
+}
+#endif
+
 static void mdss_smmu_deinit_v2(struct mdss_data_type *mdata)
 {
 	int i;
@@ -827,7 +837,10 @@ int mdss_smmu_probe(struct platform_device *pdev)
 	} else {
 		pr_debug("unable to map context bank base\n");
 	}
-
+#ifdef TARGET_HW_MDSS_MDP3
+	iommu_set_fault_handler(mdss_smmu->mmu_mapping->domain,
+				 mdp3_iommu_fault_handler, NULL);
+#endif
 	pr_info("iommu v2 domain[%d] mapping and clk register successful!\n",
 			smmu_domain.domain);
 	return 0;
