@@ -1,6 +1,6 @@
 /*
  *
- * Copyright (c) 2014-2015, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2015,2017 The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -113,8 +113,6 @@ static int hall_config_regulator(struct platform_device *dev, bool on)
 			}
 		}
 		return rc;
-	} else {
-		goto deinit_vregs;
 	}
 
 deinit_vregs:
@@ -139,15 +137,14 @@ static int hall_set_regulator(struct platform_device *dev, bool on)
 			}
 		}
 		return rc;
-	} else {
-		if (!IS_ERR_OR_NULL(data->vddio)) {
-			rc = regulator_disable(data->vddio);
-			if (rc)
-				dev_err(&dev->dev, "Disable regulator vddio failed rc=%d\n",
-					rc);
-		}
-		return 0;
 	}
+	if (!IS_ERR_OR_NULL(data->vddio)) {
+		rc = regulator_disable(data->vddio);
+		if (rc)
+			dev_err(&dev->dev, "Disable regulator vddio failed rc=%d\n",
+				rc);
+	}
+	return 0;
 
 disable_regulator:
 	if (!IS_ERR_OR_NULL(data->vddio))

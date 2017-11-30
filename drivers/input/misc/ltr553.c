@@ -723,7 +723,7 @@ static int ltr553_calc_adc(int ratio, int lux, int gain, int als_int_fac)
 	struct als_coeff *eqtn;
 	int result;
 
-	/* avoid devided by 0 */
+	/* avoid divided by 0 */
 	if (ratio == 0)
 		return 0;
 
@@ -1862,10 +1862,8 @@ static int ltr553_probe(struct i2c_client *client,
 
 	ltr = devm_kzalloc(&client->dev, sizeof(struct ltr553_data),
 			GFP_KERNEL);
-	if (!ltr) {
-		dev_err(&client->dev, "memory allocation failed,\n");
+	if (!ltr)
 		return -ENOMEM;
-	}
 
 	ltr->i2c = client;
 
