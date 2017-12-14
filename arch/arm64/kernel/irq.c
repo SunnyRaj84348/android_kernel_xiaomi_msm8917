@@ -93,6 +93,9 @@ void migrate_irqs(void)
 	for_each_irq_desc(i, desc) {
 		bool affinity_broken;
 
+		if (!desc)
+			continue;
+
 		raw_spin_lock(&desc->lock);
 		affinity_broken = migrate_one_irq(desc);
 		raw_spin_unlock(&desc->lock);
