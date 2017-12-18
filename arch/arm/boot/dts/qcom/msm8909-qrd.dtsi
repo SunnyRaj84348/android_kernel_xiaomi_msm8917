@@ -13,6 +13,7 @@
 #include "msm8909.dtsi"
 #include "msm8909-pm8909.dtsi"
 #include "msm8909-pinctrl.dtsi"
+#include "msm8909-regulator.dtsi"
 
 / {
 	model = "Qualcomm Technologies, Inc. MSM8909 QRD";
