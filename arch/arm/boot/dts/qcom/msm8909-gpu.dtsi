@@ -93,7 +93,6 @@
 		qcom,pm-qos-active-latency = <701>;
 		qcom,pm-qos-wakeup-latency = <701>;
 
-
 		/* Power levels */
 		qcom,gpu-pwrlevels {
 			#address-cells = <1>;
