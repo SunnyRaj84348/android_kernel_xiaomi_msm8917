@@ -2199,6 +2199,7 @@ static void status_change_work(struct work_struct *work)
 	if (rc < 0)
 		pr_err("Error in adjusting recharge_soc, rc=%d\n", rc);
 
+
 	rc = fg_adjust_ki_coeff_dischg(chip);
 	if (rc < 0)
 		pr_err("Error in adjusting ki_coeff_dischg, rc=%d\n", rc);
@@ -2230,6 +2231,26 @@ out:
 	fg_dbg(chip, FG_POWER_SUPPLY, "charge_status:%d charge_type:%d charge_done:%d\n",
 		chip->charge_status, chip->charge_type, chip->charge_done);
 	pm_relax(chip->dev);
+
+	chip->online_status = online;
+	if (online)
+		/* wait 35 seconds for the input to settle */
+		delay_ms = 35000;
+	else
+		/* wait 5 seconds for current to settle during discharge */
+		delay_ms = 5000;
+
+	vote(chip->awake_votable, TTF_PRIMING, true, 0);
+	cancel_delayed_work_sync(&chip->ttf_work);
+	mutex_lock(&chip->ttf.lock);
+	fg_circ_buf_clr(&chip->ttf.ibatt);
+	fg_circ_buf_clr(&chip->ttf.vbatt);
+	chip->ttf.last_ttf = 0;
+	chip->ttf.last_ms = 0;
+	mutex_unlock(&chip->ttf.lock);
+	queue_delayed_work(system_power_efficient_wq,
+		&chip->ttf_work, msecs_to_jiffies(delay_ms));
+
 }
 
 static void restore_cycle_counter(struct fg_chip *chip)
@@ -2650,7 +2671,8 @@ static void sram_dump_work(struct work_struct *work)
 	fg_dbg(chip, FG_STATUS, "SRAM Dump done at %lld.%d\n",
 		quotient, remainder);
 resched:
-	schedule_delayed_work(&chip->sram_dump_work,
+	queue_delayed_work(system_power_efficient_wq,
+		&chip->sram_dump_work,
 			msecs_to_jiffies(fg_sram_dump_period_ms));
 }
 
@@ -2678,7 +2700,8 @@ static int fg_sram_dump_sysfs(const char *val, const struct kernel_param *kp)
 
 	chip = power_supply_get_drvdata(bms_psy);
 	if (fg_sram_dump)
-		schedule_delayed_work(&chip->sram_dump_work,
+		queue_delayed_work(system_power_efficient_wq,
+			&chip->sram_dump_work,
 				msecs_to_jiffies(fg_sram_dump_period_ms));
 	else
 		cancel_delayed_work_sync(&chip->sram_dump_work);
@@ -3035,6 +3058,153 @@ static int fg_esr_validate(struct fg_chip *chip)
 	fg_dbg(chip, FG_STATUS, "ESR clamped to %duOhms\n", esr_uohms);
 	return 0;
 }
+
+
+static int fg_force_esr_meas(struct fg_chip *chip)
+{
+	int rc;
+	int esr_uohms;
+
+	/* force esr extraction enable */
+	rc = fg_sram_masked_write(chip, ESR_EXTRACTION_ENABLE_WORD,
+			ESR_EXTRACTION_ENABLE_OFFSET, BIT(0), BIT(0),
+			FG_IMA_DEFAULT);
+	if (rc < 0) {
+		pr_err("failed to enable esr extn rc=%d\n", rc);
+		return rc;
+	}
+
+	rc = fg_masked_write(chip, BATT_INFO_QNOVO_CFG(chip),
+			LD_REG_CTRL_BIT, 0);
+	if (rc < 0) {
+		pr_err("Error in configuring qnovo_cfg rc=%d\n", rc);
+		return rc;
+	}
+
+	rc = fg_masked_write(chip, BATT_INFO_TM_MISC1(chip),
+			ESR_REQ_CTL_BIT | ESR_REQ_CTL_EN_BIT,
+			ESR_REQ_CTL_BIT | ESR_REQ_CTL_EN_BIT);
+	if (rc < 0) {
+		pr_err("Error in configuring force ESR rc=%d\n", rc);
+		return rc;
+	}
+
+	/* wait 1.5 seconds for hw to measure ESR */
+	msleep(1500);
+	rc = fg_masked_write(chip, BATT_INFO_TM_MISC1(chip),
+			ESR_REQ_CTL_BIT | ESR_REQ_CTL_EN_BIT,
+			0);
+	if (rc < 0) {
+		pr_err("Error in restoring force ESR rc=%d\n", rc);
+		return rc;
+	}
+
+	rc = fg_masked_write(chip, BATT_INFO_QNOVO_CFG(chip),
+			LD_REG_CTRL_BIT, LD_REG_CTRL_BIT);
+	if (rc < 0) {
+		pr_err("Error in restoring qnovo_cfg rc=%d\n", rc);
+		return rc;
+	}
+
+	/* force esr extraction disable */
+	rc = fg_sram_masked_write(chip, ESR_EXTRACTION_ENABLE_WORD,
+			ESR_EXTRACTION_ENABLE_OFFSET, BIT(0), 0,
+			FG_IMA_DEFAULT);
+	if (rc < 0) {
+		pr_err("failed to disable esr extn rc=%d\n", rc);
+		return rc;
+	}
+
+	fg_get_battery_resistance(chip, &esr_uohms);
+	fg_dbg(chip, FG_STATUS, "ESR uohms = %d\n", esr_uohms);
+
+	return rc;
+}
+
+static int fg_prepare_for_qnovo(struct fg_chip *chip, int qnovo_enable)
+{
+	int rc;
+
+	/* force esr extraction disable when qnovo enables */
+	rc = fg_sram_masked_write(chip, ESR_EXTRACTION_ENABLE_WORD,
+			ESR_EXTRACTION_ENABLE_OFFSET,
+			BIT(0), qnovo_enable ? 0 : BIT(0),
+			FG_IMA_DEFAULT);
+	if (rc < 0)
+		pr_err("Error in configuring esr extraction rc=%d\n", rc);
+
+	rc = fg_masked_write(chip, BATT_INFO_QNOVO_CFG(chip),
+			LD_REG_CTRL_BIT,
+			qnovo_enable ? LD_REG_CTRL_BIT : 0);
+	if (rc < 0) {
+		pr_err("Error in configuring qnovo_cfg rc=%d\n", rc);
+		return rc;
+	}
+	fg_dbg(chip, FG_STATUS, "Prepared for Qnovo\n");
+	return 0;
+}
+
+static void ttf_work(struct work_struct *work)
+{
+	struct fg_chip *chip = container_of(work, struct fg_chip,
+					    ttf_work.work);
+	int rc, ibatt_now, vbatt_now, ttf;
+	ktime_t ktime_now;
+
+	mutex_lock(&chip->ttf.lock);
+	if (chip->charge_status != POWER_SUPPLY_STATUS_CHARGING &&
+			chip->charge_status != POWER_SUPPLY_STATUS_DISCHARGING)
+		goto end_work;
+
+	rc = fg_get_battery_current(chip, &ibatt_now);
+	if (rc < 0) {
+		pr_err("failed to get battery current, rc=%d\n", rc);
+		goto end_work;
+	}
+
+	rc = fg_get_battery_voltage(chip, &vbatt_now);
+	if (rc < 0) {
+		pr_err("failed to get battery voltage, rc=%d\n", rc);
+		goto end_work;
+	}
+
+	fg_circ_buf_add(&chip->ttf.ibatt, ibatt_now);
+	fg_circ_buf_add(&chip->ttf.vbatt, vbatt_now);
+
+	if (chip->charge_status == POWER_SUPPLY_STATUS_CHARGING) {
+		rc = fg_get_time_to_full_locked(chip, &ttf);
+		if (rc < 0) {
+			pr_err("failed to get ttf, rc=%d\n", rc);
+			goto end_work;
+		}
+
+		/* keep the wake lock and prime the IBATT and VBATT buffers */
+		if (ttf < 0) {
+			/* delay for one FG cycle */
+			queue_delayed_work(system_power_efficient_wq,
+				&chip->ttf_work, msecs_to_jiffies(1500));
+			mutex_unlock(&chip->ttf.lock);
+			return;
+		}
+
+		/* update the TTF reference point every minute */
+		ktime_now = ktime_get_boottime();
+		if (ktime_ms_delta(ktime_now,
+				   ms_to_ktime(chip->ttf.last_ms)) > 60000 ||
+				   chip->ttf.last_ms == 0) {
+			chip->ttf.last_ttf = ttf;
+			chip->ttf.last_ms = ktime_to_ms(ktime_now);
+		}
+	}
+
+	/* recurse every 10 seconds */
+	queue_delayed_work(system_power_efficient_wq,
+		&chip->ttf_work, msecs_to_jiffies(10000));
+end_work:
+	vote(chip->awake_votable, TTF_PRIMING, false, 0);
+	mutex_unlock(&chip->ttf.lock);
+}
+
 
 /* PSY CALLBACKS STAY HERE */
 
@@ -3597,7 +3767,8 @@ static irqreturn_t fg_batt_missing_irq_handler(int irq, void *data)
 	}
 
 	clear_battery_profile(chip);
-	schedule_delayed_work(&chip->profile_load_work, 0);
+	queue_delayed_work(system_power_efficient_wq,
+		&chip->profile_load_work, 0);
 
 	power_supply_changed(&chip->fg_psy);
 
@@ -4564,7 +4735,9 @@ static int fg_gen3_probe(struct spmi_device *spmi)
 
 	device_init_wakeup(chip->dev, true);
 
-	schedule_delayed_work(&chip->profile_load_work, 0);
+	queue_delayed_work(system_power_efficient_wq,
+		&chip->profile_load_work, 0);
+
 
 	pr_debug("FG GEN3 driver probed successfully\n");
 	return 0;
@@ -4599,9 +4772,13 @@ static int fg_gen3_resume(struct device *dev)
 
 	fg_circ_buf_clr(&chip->ibatt_circ_buf);
 	fg_circ_buf_clr(&chip->vbatt_circ_buf);
-	schedule_delayed_work(&chip->batt_avg_work, 0);
+	
+	queue_delayed_work(system_power_efficient_wq,
+		&chip->ttf_work, 0);
+
 	if (fg_sram_dump)
-		schedule_delayed_work(&chip->sram_dump_work,
+		queue_delayed_work(system_power_efficient_wq,
+			&chip->sram_dump_work,
 				msecs_to_jiffies(fg_sram_dump_period_ms));
 	return 0;
 }
