@@ -266,7 +266,6 @@ static inline void fast_imageblit(const struct fb_image *image, struct fb_info *
 		s += spitch;
 	}
 }	
-	
 /*
  * Optimized fast_imageblit for bpp == 16. ppw = 2, bit_mask = 3 folded
  * into the code, main loop unrolled.
