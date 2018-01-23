@@ -48,7 +48,7 @@
 #include "msm8x16_wcd_registers.h"
 
 #define MSM8X16_WCD_RATES (SNDRV_PCM_RATE_8000 | SNDRV_PCM_RATE_16000 |\
-			SNDRV_PCM_RATE_32000 | SNDRV_PCM_RATE_48000)
+			SNDRV_PCM_RATE_32000 | SNDRV_PCM_RATE_48000 | SNDRV_PCM_RATE_96000)
 #define MSM8X16_WCD_FORMATS (SNDRV_PCM_FMTBIT_S16_LE |\
 		SNDRV_PCM_FMTBIT_S24_LE |\
 		SNDRV_PCM_FMTBIT_S24_3LE |\
@@ -4926,7 +4926,7 @@ static struct snd_soc_dai_driver msm8x16_wcd_i2s_dai[] = {
 			.stream_name = "VIfeed",
 			.rates = MSM8X16_WCD_RATES,
 			.formats = MSM8X16_WCD_FORMATS,
-			.rate_max = 48000,
+			.rate_max = 96000,
 			.rate_min = 48000,
 			.channels_min = 2,
 			.channels_max = 2,
