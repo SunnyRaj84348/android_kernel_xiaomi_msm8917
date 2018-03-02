@@ -107,3 +107,4 @@ obj-$(CONFIG_MSM_RTB) += msm_rtb-hotplug.o
 obj-$(CONFIG_MSM_REMOTEQDSS) += remoteqdss.o
 obj-$(CONFIG_QCOM_SMCINVOKE) += smcinvoke.o
 obj-$(CONFIG_CPUMAXFREQ) += cpumaxfreq.o
+obj-$(CONFIG_SERIAL_NUM) += serial_num.o
