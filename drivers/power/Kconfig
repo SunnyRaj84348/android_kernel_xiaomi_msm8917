@@ -636,6 +636,19 @@ config MSM_BCL_PERIPHERAL_CTL
 	  provides routines to configure and monitor the BCL
 	  PMIC peripheral.
 
+config BATTERY_CW2015
+	tristate "CW2015 battery driver"
+	depends on I2C
+	help
+	  Say Y here to enable Test sysfs Interface for CW2015 Drivers.
+
+config C3N_SMB358
+	bool "to seperate different projects"
+	default n
+	help
+	  Say Y here to enable a function which disabled TEMP protect...
+	  WARNNING:Only SCM could open it.
+
 source "drivers/power/reset/Kconfig"
 
 endif # POWER_SUPPLY
