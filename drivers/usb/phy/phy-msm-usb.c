@@ -1,4 +1,5 @@
 /* Copyright (c) 2009-2018, Linux Foundation. All rights reserved.
+ * Copyright (C) 2018 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -54,7 +55,7 @@
 
 #define DRIVER_NAME	"msm_otg"
 
-#define CHG_RECHECK_DELAY	(jiffies + msecs_to_jiffies(2000))
+#define CHG_RECHECK_DELAY	(jiffies + msecs_to_jiffies(5000))
 #define ULPI_IO_TIMEOUT_USEC	(10 * 1000)
 #define USB_PHY_3P3_VOL_MIN	3050000 /* uV */
 #define USB_PHY_3P3_VOL_MAX	3300000 /* uV */
@@ -139,6 +140,19 @@ static u32 bus_freqs[USB_NOC_NUM_VOTE][USB_NUM_BUS_CLOCKS]  /*bimc,snoc,pcnoc*/;
 static char bus_clkname[USB_NUM_BUS_CLOCKS][20] = {"bimc_clk", "snoc_clk",
 						"pcnoc_clk"};
 static bool bus_clk_rate_set;
+
+
+static int oem_is_kpoc;
+static int __init oem_kpoc_setup(char *str)
+{
+	if (!strncmp(str, "charger", 4)) {
+		oem_is_kpoc = 1;
+		printk("[oem][kpoc] disable udc @kpoc mode\n");
+	}
+	return 1;
+}
+__setup("androidboot.mode=", oem_kpoc_setup);
+
 
 static void dbg_inc(unsigned *idx)
 {
@@ -481,10 +495,13 @@ static void ulpi_init(struct msm_otg *motg)
 static int msm_otg_phy_clk_reset(struct msm_otg *motg)
 {
 	int ret;
+	unsigned long flags;
 
 	if (!motg->phy_reset_clk)
 		return 0;
-
+	spin_lock_irqsave(&motg->otg_phy_clk_lock, flags);
+	motg->otg_phy_clk_enable = false;
+	spin_unlock_irqrestore(&motg->otg_phy_clk_lock, flags);
 	if (motg->sleep_clk)
 		clk_disable_unprepare(motg->sleep_clk);
 	if (motg->phy_csr_clk)
@@ -515,6 +532,9 @@ static int msm_otg_phy_clk_reset(struct msm_otg *motg)
 		clk_prepare_enable(motg->phy_csr_clk);
 	if (motg->sleep_clk)
 		clk_prepare_enable(motg->sleep_clk);
+	spin_lock_irqsave(&motg->otg_phy_clk_lock, flags);
+	motg->otg_phy_clk_enable = true;
+	spin_unlock_irqrestore(&motg->otg_phy_clk_lock, flags);
 
 	return 0;
 }
@@ -754,24 +774,12 @@ static int msm_otg_reset(struct usb_phy *phy)
 	}
 	motg->reset_counter++;
 
-	disable_irq(motg->irq);
-	if (motg->phy_irq)
-		disable_irq(motg->phy_irq);
-
 	ret = msm_otg_phy_reset(motg);
 	if (ret) {
 		dev_err(phy->dev, "phy_reset failed\n");
-		if (motg->phy_irq)
-			enable_irq(motg->phy_irq);
-
-		enable_irq(motg->irq);
 		return ret;
 	}
 
-	if (motg->phy_irq)
-		enable_irq(motg->phy_irq);
-
-	enable_irq(motg->irq);
 	ret = msm_otg_link_reset(motg);
 	if (ret) {
 		dev_err(phy->dev, "link reset failed\n");
@@ -1440,6 +1448,11 @@ phcd_retry:
 	if (!(phy->state == OTG_STATE_B_PERIPHERAL &&
 			test_bit(A_BUS_SUSPEND, &motg->inputs)) ||
 			!motg->pdata->core_clk_always_on_workaround) {
+		unsigned long flags;
+		spin_lock_irqsave(&motg->otg_phy_clk_lock, flags);
+		motg->otg_phy_clk_enable = false;
+		spin_unlock_irqrestore(&motg->otg_phy_clk_lock, flags);
+
 		clk_disable_unprepare(motg->pclk);
 		clk_disable_unprepare(motg->core_clk);
 		if (motg->phy_csr_clk)
@@ -1576,6 +1589,7 @@ static int msm_otg_resume(struct msm_otg *motg)
 	}
 
 	if (motg->lpm_flags & CLOCKS_DOWN) {
+		unsigned long flags;
 		if (motg->phy_csr_clk) {
 			ret = clk_prepare_enable(motg->phy_csr_clk);
 			WARN(ret, "USB phy_csr_clk enable failed\n");
@@ -1585,6 +1599,10 @@ static int msm_otg_resume(struct msm_otg *motg)
 		ret = clk_prepare_enable(motg->pclk);
 		WARN(ret, "USB pclk enable failed\n");
 		motg->lpm_flags &= ~CLOCKS_DOWN;
+		spin_lock_irqsave(&motg->otg_phy_clk_lock, flags);
+		motg->otg_phy_clk_enable = true;
+		spin_unlock_irqrestore(&motg->otg_phy_clk_lock, flags);
+
 	}
 
 	if (motg->lpm_flags & PHY_PWR_COLLAPSED) {
@@ -2254,7 +2272,13 @@ static bool msm_otg_read_pmic_id_state(struct msm_otg *motg)
 static bool msm_otg_read_phy_id_state(struct msm_otg *motg)
 {
 	u8 val;
+	unsigned long flags;
 
+	spin_lock_irqsave(&motg->otg_phy_clk_lock, flags);
+	if (false == motg->otg_phy_clk_enable) {
+		spin_unlock_irqrestore(&motg->otg_phy_clk_lock, flags);
+		return motg->id_state;
+	}
 	/*
 	 * clear the pending/outstanding interrupts and
 	 * read the ID status from the SRC_STATUS register.
@@ -2270,6 +2294,7 @@ static bool msm_otg_read_phy_id_state(struct msm_otg *motg)
 	writeb_relaxed(0x0, USB2_PHY_USB_PHY_IRQ_CMD);
 
 	val = readb_relaxed(USB2_PHY_USB_PHY_INTERRUPT_SRC_STATUS);
+	spin_unlock_irqrestore(&motg->otg_phy_clk_lock, flags);
 	if (val & USB_PHY_IDDIG_1_0)
 		return false; /* ID is grounded */
 	else
@@ -2867,6 +2892,18 @@ static void msm_otg_sm_work(struct work_struct *w)
 							IDEV_CHG_MAX);
 					/* fall through */
 				case USB_SDP_CHARGER:
+
+					if (oem_is_kpoc) {
+						motg->chg_type = USB_DCP_CHARGER;
+						msm_otg_notify_charger(motg, 500);
+						otg->phy->state = OTG_STATE_B_CHARGER;
+						work = 0;
+						pm_runtime_put_noidle(otg->phy->dev);
+						pm_runtime_suspend(otg->phy->dev);
+						break;
+					}
+
+					msm_otg_notify_charger(motg, IDEV_CHG_MIN);
 					pm_runtime_get_sync(otg->phy->dev);
 					msm_otg_start_peripheral(otg, 1);
 					otg->phy->state =
@@ -4516,6 +4553,9 @@ static int msm_otg_probe(struct platform_device *pdev)
 		}
 	}
 
+	motg->otg_phy_clk_enable = true;
+	spin_lock_init(&motg->otg_phy_clk_lock);
+
 	of_property_read_u32(pdev->dev.of_node, "qcom,pm-qos-latency",
 				&motg->pm_qos_latency);
 
@@ -4765,7 +4805,6 @@ static int msm_otg_probe(struct platform_device *pdev)
 	mb();
 
 	motg->id_state = USB_ID_FLOAT;
-	set_bit(ID, &motg->inputs);
 	wake_lock_init(&motg->wlock, WAKE_LOCK_SUSPEND, "msm_otg");
 	INIT_WORK(&motg->sm_work, msm_otg_sm_work);
 	INIT_DELAYED_WORK(&motg->chg_work, msm_chg_detect_work);
@@ -5114,6 +5153,7 @@ static int msm_otg_remove(struct platform_device *pdev)
 	struct msm_otg *motg = platform_get_drvdata(pdev);
 	struct usb_phy *phy = &motg->phy;
 	int cnt = 0;
+	unsigned long flags;
 
 	if (phy->otg->host || phy->otg->gadget)
 		return -EBUSY;
@@ -5182,6 +5222,9 @@ static int msm_otg_remove(struct platform_device *pdev)
 
 	clk_disable_unprepare(motg->pclk);
 	clk_disable_unprepare(motg->core_clk);
+	spin_lock_irqsave(&motg->otg_phy_clk_lock, flags);
+	motg->otg_phy_clk_enable = false;
+	spin_unlock_irqrestore(&motg->otg_phy_clk_lock, flags);
 	if (motg->phy_csr_clk)
 		clk_disable_unprepare(motg->phy_csr_clk);
 	if (motg->xo_clk) {
@@ -5348,3 +5391,4 @@ module_platform_driver(msm_otg_driver);
 
 MODULE_LICENSE("GPL v2");
 MODULE_DESCRIPTION("MSM USB transceiver driver");
+
