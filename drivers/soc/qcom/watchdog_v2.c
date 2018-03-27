@@ -168,6 +168,11 @@ static int panic_wdog_handler(struct notifier_block *this,
 				wdog_dd->base + WDT0_BITE_TIME);
 		__raw_writel(1, wdog_dd->base + WDT0_RST);
 	}
+#ifdef CONFIG_DUMP_ALL_STACKS
+	/* Suspend wdog until all stacks are printed */
+	printk(KERN_INFO "D Status stack trace dump:\n");
+	show_state_filter(TASK_UNINTERRUPTIBLE);
+#endif
 	return NOTIFY_DONE;
 }
 
