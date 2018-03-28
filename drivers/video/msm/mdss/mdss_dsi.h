@@ -1,4 +1,5 @@
-/* Copyright (c) 2012-2017, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2016, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2018 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -78,7 +79,6 @@ enum {		/* mipi dsi panel */
 	CABC_ON = 1,
 	CABC_OFF = 0,
 };
-
 
 
 enum {		/* mipi dsi panel */
@@ -932,3 +932,4 @@ static inline bool mdss_dsi_cmp_panel_reg(struct dsi_buf status_buf,
 }
 
 #endif /* MDSS_DSI_H */
+

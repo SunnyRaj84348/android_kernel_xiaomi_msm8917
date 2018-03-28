@@ -100,7 +100,6 @@ static void mdss_dsi_panel_bklt_pwm(struct mdss_dsi_ctrl_pdata *ctrl, int level)
 	pr_debug("%s: bklt_ctrl=%d pwm_period=%d pwm_gpio=%d pwm_lpg_chan=%d\n",
 			__func__, ctrl->bklt_ctrl, ctrl->pwm_period,
 				ctrl->pwm_pmic_gpio, ctrl->pwm_lpg_chan);
-
 	pr_debug("%s: ndx=%d level=%d duty=%d\n", __func__,
 					ctrl->ndx, level, duty);
 
@@ -462,7 +461,7 @@ int mdss_dsi_panel_reset(struct mdss_panel_data *pdata, int enable)
 		if (((tp_gesture_onoff) || (pinfo->pwr_off_rst_pull_high)) && pinfo->panel_dead == 0)
 			gpio_set_value((ctrl_pdata->rst_gpio), 1);
 		else
-	
+			gpio_set_value((ctrl_pdata->rst_gpio), 0);
 		gpio_free(ctrl_pdata->rst_gpio);
 		if (gpio_is_valid(ctrl_pdata->mode_gpio))
 			gpio_free(ctrl_pdata->mode_gpio);
@@ -866,6 +865,7 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 	pr_debug("%s: ndx=%d cmd_cnt=%d\n", __func__,
 				ctrl->ndx, on_cmds->cmd_cnt);
 
+
 	if (ctrl->eyemode == true && (!strcmp(Lcm_name, "nt35521s_HD720p_video_EBBG_c3a"))) {
 		if (on_cmds->cmd_cnt)
 			mdss_dsi_panel_cmds_send(ctrl, on_cmds, CMD_REQ_COMMIT);
@@ -883,7 +883,6 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 				mdss_dsi_panel_cmds_send(ctrl, &ctrl->ce_cmds, CMD_REQ_COMMIT);
 			}
 	}
-
 
 	if (on_cmds->cmd_cnt)
 		mdss_dsi_panel_cmds_send(ctrl, on_cmds, CMD_REQ_COMMIT);
@@ -1811,12 +1810,18 @@ static bool mdss_dsi_cmp_panel_reg_v2(struct mdss_dsi_ctrl_pdata *ctrl)
 
 	for (j = 0; j < ctrl->groups; ++j) {
 		for (i = 0; i < len; ++i) {
-
 			if (ctrl->return_buf[i] != ctrl->status_value[group + i]) {
 				pr_info("%s: LCD ESD check fail, return_buf[%d]=0x%02x , status_value=[%d]=0x%02x \n", __func__,
 				i, ctrl->return_buf[i], group + i, ctrl->status_value[group + i]);
 				break;
+				}
+			#ifdef CONFIG_D1_ROSY
 
+			if (panel_dead2tp) {
+				pr_info("%s: LCD ESD check fail, panel_dead2tp is %d\n ", __func__, panel_dead2tp);
+				break;
+			}
+			#endif
 		}
 
 		if (i == len)
@@ -2674,6 +2679,7 @@ exit:
 	return rc;
 }
 
+
 void mdss_dsi_parse_eye_command(struct device_node *np, struct mdss_dsi_ctrl_pdata *ctrl_pdata)
 {
 	int i = 0;
@@ -2756,6 +2762,9 @@ static int mdss_panel_parse_dt(struct device_node *np,
 
 	rc = of_property_read_u32(np, "qcom,mdss-brightness-max-level", &tmp);
 	pinfo->brightness_max = (!rc ? tmp : MDSS_MAX_BL_BRIGHTNESS);
+	#if defined(WT_COMPILE_FACTORY_VERSION) && defined(CONFIG_D1_ROSY)
+	pinfo->brightness_max = 255;
+	#endif
 	rc = of_property_read_u32(np, "qcom,mdss-dsi-bl-min-level", &tmp);
 	pinfo->bl_min = (!rc ? tmp : 0);
 	rc = of_property_read_u32(np, "qcom,mdss-dsi-bl-max-level", &tmp);
@@ -2898,12 +2907,13 @@ static int mdss_panel_parse_dt(struct device_node *np,
 	mdss_dsi_parse_reset_seq(np, pinfo->rst_seq, &(pinfo->rst_seq_len),
 		"qcom,mdss-dsi-reset-sequence");
 
+
 	rc = of_property_read_u32(np, "qcom,mdss-dsi-pwr-off-rst-pull-high", &tmp);
 	pinfo->pwr_off_rst_pull_high = (!rc ? tmp : 0);
 
 	mdss_dsi_parse_dcs_cmds(np, &ctrl_pdata->off_cmds,
 		"qcom,mdss-dsi-off-command", "qcom,mdss-dsi-off-command-state");
- 
+
 	mdss_dsi_parse_dcs_cmds(np, &ctrl_pdata->warm_cmds,
 		"qcom,mdss-dsi-panel-warm-command", "qcom,mdss-dsi-panel-gamma-command-state");
 
@@ -3025,3 +3035,4 @@ int mdss_dsi_panel_init(struct device_node *node,
 	ctrl_pdata->panel_data.get_idle = mdss_dsi_panel_get_idle_mode;
 	return 0;
 }
+
