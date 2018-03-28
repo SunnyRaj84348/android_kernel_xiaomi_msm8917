@@ -1,4 +1,5 @@
 /* Copyright (c) 2013-2018, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2018 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -664,7 +665,6 @@ static int32_t msm_cpp_poll_rx_empty(void __iomem *cpp_base)
 	}
 	return rc;
 }
-
 static int msm_cpp_dump_addr(struct cpp_device *cpp_dev,
 	struct msm_cpp_frame_info_t *frame_info)
 {
@@ -726,7 +726,7 @@ static int msm_cpp_dump_addr(struct cpp_device *cpp_dev,
 				cpp_frame_msg[s_base + rd_ref_off + i * s_size]
 				);
 		}
-
+  
 		if (ubwc_enabled) {
 			pr_err("stripe %d: metadata %x, %x, %x, %x\n", i,
 				cpp_frame_msg[s_base + wr0_mdata_off +
@@ -743,7 +743,7 @@ static int msm_cpp_dump_addr(struct cpp_device *cpp_dev,
 	}
 	return 0;
 }
-
+  
 static void msm_cpp_iommu_fault_handler(struct iommu_domain *domain,
 	struct device *dev, unsigned long iova, int flags, void *token)
 {
@@ -762,7 +762,9 @@ static void msm_cpp_iommu_fault_handler(struct iommu_domain *domain,
 		}
 		mutex_lock(&cpp_dev->mutex);
 		tasklet_kill(&cpp_dev->cpp_tasklet);
-		rc = cpp_load_fw(cpp_dev, cpp_dev->fw_name_bin);
+
+				rc = cpp_load_fw(cpp_dev, cpp_dev->fw_name_bin);
+
 		if (rc < 0) {
 			pr_err("load fw failure %d-retry\n", rc);
 			rc = msm_cpp_reset_vbif_and_load_fw(cpp_dev);
@@ -812,9 +814,12 @@ static int cpp_init_mem(struct cpp_device *cpp_dev)
 		return -ENODEV;
 
 	cpp_dev->iommu_hdl = iommu_hdl;
+
 	cam_smmu_reg_client_page_fault_handler(
 			cpp_dev->iommu_hdl,
 			msm_cpp_iommu_fault_handler, cpp_dev);
+
+
 	return 0;
 }
 
