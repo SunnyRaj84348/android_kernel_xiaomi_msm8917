@@ -3269,6 +3269,8 @@ int q6asm_set_shared_circ_buff(struct audio_client *ac,
 		goto done;
 	}
 
+
+
 	bytes_to_alloc = bufsz * bufcnt;
 	bytes_to_alloc = PAGE_ALIGN(bytes_to_alloc);
 
