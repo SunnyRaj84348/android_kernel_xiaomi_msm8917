@@ -886,7 +886,7 @@ int send_adm_apr(void *buf, u32 opcode)
 		if (bytes_returned > rtac_cal[ADM_RTAC_CAL].
 			map_data.map_size) {
 			pr_err("%s: Invalid data size = %d\n",
-				__func__, bytes_returned);
+			__func__, bytes_returned);
 			result = -EINVAL;
 			goto err;
 		}
@@ -1116,7 +1116,7 @@ int send_rtac_asm_apr(void *buf, u32 opcode)
 		if (bytes_returned > rtac_cal[ASM_RTAC_CAL].
 			map_data.map_size) {
 			pr_err("%s: Invalid data size = %d\n",
-				__func__, bytes_returned);
+			__func__, bytes_returned);
 			result = -EINVAL;
 			goto err;
 		}
@@ -1383,7 +1383,7 @@ static int send_rtac_afe_apr(void *buf, uint32_t opcode)
 		if (bytes_returned > rtac_cal[AFE_RTAC_CAL].
 			map_data.map_size) {
 			pr_err("%s: Invalid data size = %d\n",
-				__func__, bytes_returned);
+			__func__, bytes_returned);
 			result = -EINVAL;
 			goto err;
 		}
@@ -1613,7 +1613,7 @@ int send_voice_apr(u32 mode, void *buf, u32 opcode)
 		if (bytes_returned > rtac_cal[VOICE_RTAC_CAL].
 			map_data.map_size) {
 			pr_err("%s: Invalid data size = %d\n",
-				__func__, bytes_returned);
+			__func__, bytes_returned);
 			result = -EINVAL;
 			goto err;
 		}
