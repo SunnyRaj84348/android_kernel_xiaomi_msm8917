@@ -1,4 +1,5 @@
-/* Copyright (c) 2009-2018, Linux Foundation. All rights reserved.
+/* Copyright (c) 2009-2016, Linux Foundation. All rights reserved.
+ * Copyright (C) 2018 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -139,6 +140,7 @@ static u32 bus_freqs[USB_NOC_NUM_VOTE][USB_NUM_BUS_CLOCKS]  /*bimc,snoc,pcnoc*/;
 static char bus_clkname[USB_NUM_BUS_CLOCKS][20] = {"bimc_clk", "snoc_clk",
 						"pcnoc_clk"};
 static bool bus_clk_rate_set;
+
 
 static int oem_is_kpoc;
 static int __init oem_kpoc_setup(char *str)
@@ -2273,13 +2275,14 @@ static bool msm_otg_read_pmic_id_state(struct msm_otg *motg)
 static bool msm_otg_read_phy_id_state(struct msm_otg *motg)
 {
 	u8 val;
-+	unsigned long flags;
+	unsigned long flags;
 
 	spin_lock_irqsave(&motg->otg_phy_clk_lock, flags);
 	if (false == motg->otg_phy_clk_enable) {
 		spin_unlock_irqrestore(&motg->otg_phy_clk_lock, flags);
 		return motg->id_state;
-	}	/*
+	}
+	/*
 	 * clear the pending/outstanding interrupts and
 	 * read the ID status from the SRC_STATUS register.
 	 */
@@ -4556,7 +4559,6 @@ static int msm_otg_probe(struct platform_device *pdev)
 	motg->otg_phy_clk_enable = true;
 	spin_lock_init(&motg->otg_phy_clk_lock);
 
-
 	of_property_read_u32(pdev->dev.of_node, "qcom,pm-qos-latency",
 				&motg->pm_qos_latency);
 
@@ -5393,3 +5395,4 @@ module_platform_driver(msm_otg_driver);
 
 MODULE_LICENSE("GPL v2");
 MODULE_DESCRIPTION("MSM USB transceiver driver");
+
