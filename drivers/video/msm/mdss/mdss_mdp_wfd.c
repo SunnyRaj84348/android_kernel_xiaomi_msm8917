@@ -485,4 +485,3 @@ int mdss_mdp_wfd_commit_done(struct mdss_mdp_wfd *wfd)
 	return 0;
 }
 
-

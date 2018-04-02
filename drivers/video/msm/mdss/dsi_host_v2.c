@@ -1328,7 +1328,7 @@ static int msm_dsi_read_status(struct mdss_dsi_ctrl_pdata *ctrl)
 	memset(&cmdreq, 0, sizeof(cmdreq));
 	cmdreq.cmds = ctrl->status_cmds.cmds;
 	cmdreq.cmds_cnt = ctrl->status_cmds.cmd_cnt;
-	cmdreq.flags = CMD_REQ_COMMIT | CMD_CLK_CTRL | CMD_REQ_RX;
+	cmdreq.flags = CMD_REQ_COMMIT | CMD_REQ_RX;
 	cmdreq.rlen = 1;
 	cmdreq.cb = NULL;
 	cmdreq.rbuf = ctrl->status_buf.data;
