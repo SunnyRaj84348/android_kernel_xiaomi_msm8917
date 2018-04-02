@@ -214,33 +214,24 @@ static void usb_connect_work_fn(struct work_struct *work)
  * and synchronously when Diag wants to disconnect from USB
  * explicitly.
  */
-static void __usb_disconnect(struct diag_usb_info *ch, int skip)
+static void usb_disconnect(struct diag_usb_info *ch)
 {
 	if (!ch)
 		return;
 
-	WARN_ON(skip && !atomic_read(&ch->connected) && driver->usb_connected);
-
-	if (!skip && !atomic_read(&ch->connected) && driver->usb_connected)
+	if (!atomic_read(&ch->connected) &&
+		driver->usb_connected && diag_mask_param())
 		diag_clear_masks(NULL);
 
 	if (ch && ch->ops && ch->ops->close)
 		ch->ops->close(ch->ctxt, DIAG_USB_MODE);
 }
 
-static void usb_disconnect(struct diag_usb_info *ch)
-{
-	if (!ch)
-		return;
-
-	__usb_disconnect(ch, ch->closing);
-}
-
 static void usb_disconnect_work_fn(struct work_struct *work)
 {
 	struct diag_usb_info *ch = container_of(work, struct diag_usb_info,
 						disconnect_work);
-	__usb_disconnect(ch, 0);
+	usb_disconnect(ch);
 }
 
 static void usb_read_work_fn(struct work_struct *work)
@@ -365,14 +356,12 @@ static void diag_usb_notifier(void *priv, unsigned event,
 	switch (event) {
 	case USB_DIAG_CONNECT:
 		usb_info->max_size = usb_diag_request_size(usb_info->hdl);
-		usb_info->closing = 0;
 		atomic_set(&usb_info->connected, 1);
 		pr_info("diag: USB channel %s connected\n", usb_info->name);
 		queue_work(usb_info->usb_wq,
 			   &usb_info->connect_work);
 		break;
 	case USB_DIAG_DISCONNECT:
-		usb_info->closing = 1;
 		atomic_set(&usb_info->connected, 0);
 		pr_info("diag: USB channel %s disconnected\n", usb_info->name);
 		queue_work(usb_info->usb_wq,

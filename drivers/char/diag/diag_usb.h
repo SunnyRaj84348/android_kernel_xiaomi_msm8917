@@ -53,7 +53,6 @@ struct diag_usb_info {
 	atomic_t connected;
 	atomic_t diag_state;
 	atomic_t read_pending;
-	int closing;
 	int enabled;
 	int mempool;
 	int max_size;
