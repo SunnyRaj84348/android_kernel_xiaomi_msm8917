@@ -358,6 +358,7 @@ static int mdss_dsi_panel_power_on(struct mdss_panel_data *pdata)
 			pr_err("%s: Panel reset failed. rc=%d\n",
 					__func__, ret);
 	}
+
 	return ret;
 }
 
@@ -2910,6 +2911,7 @@ static struct device_node *mdss_dsi_find_panel_of_node(
 			is_tianma_panel = true;
 
 		pr_info("%s: cmdline:%s panel_name:%s\n",
+
 			__func__, panel_cfg, panel_name);
 		if (!strcmp(panel_name, NONE_PANEL))
 			goto exit;
@@ -4629,4 +4631,3 @@ module_exit(mdss_dsi_driver_cleanup);
 MODULE_LICENSE("GPL v2");
 MODULE_DESCRIPTION("DSI controller driver");
 MODULE_AUTHOR("Chandan Uddaraju <chandanu@codeaurora.org>");
-
