@@ -222,3 +222,4 @@ int mdss_pll_util_resource_parse(struct platform_device *pdev,
 struct dss_vreg *mdss_pll_get_mp_by_reg_name(struct mdss_pll_resources *pll_res
 		, char *name);
 #endif
+

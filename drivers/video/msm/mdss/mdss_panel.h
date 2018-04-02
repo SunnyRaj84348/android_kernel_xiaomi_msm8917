@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2017, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2008-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -20,18 +20,10 @@
 #include <linux/types.h>
 #include <linux/debugfs.h>
 
-#define KHZ_TO_HZ 1000
-
 /* panel id type */
 struct panel_id {
 	u16 id;
 	u16 type;
-};
-
-enum fps_resolution {
-	FPS_RESOLUTION_DEFAULT,
-	FPS_RESOLUTION_HZ,
-	FPS_RESOLUTION_KHZ,
 };
 
 #define DEFAULT_FRAME_RATE	60
@@ -115,11 +107,6 @@ enum {
 	MDSS_PANEL_POWER_ON,
 	MDSS_PANEL_POWER_LP1,
 	MDSS_PANEL_POWER_LP2,
-};
-
-enum {
-	MDSS_PANEL_LOW_PERSIST_MODE_OFF = 0,
-	MDSS_PANEL_LOW_PERSIST_MODE_ON,
 };
 
 enum {
@@ -270,7 +257,6 @@ enum mdss_intf_events {
 	MDSS_EVENT_DSI_RECONFIG_CMD,
 	MDSS_EVENT_DSI_RESET_WRITE_PTR,
 	MDSS_EVENT_PANEL_TIMING_SWITCH,
-	MDSS_EVENT_UPDATE_PARAMS,
 	MDSS_EVENT_MAX,
 };
 
@@ -396,7 +382,6 @@ struct mipi_panel_info {
 	char traffic_mode;
 	char frame_rate;
 	/* command mode */
-	char frame_rate_idle;
 	char interleave_max;
 	char insert_dcs_cmd;
 	char wr_mem_continue;
@@ -421,7 +406,6 @@ struct mipi_panel_info {
 	char lp11_init;
 	u32  init_delay;
 	u32  post_init_delay;
-	u8 default_lanes;
 };
 
 struct edp_panel_info {
@@ -752,9 +736,6 @@ struct mdss_panel_info {
 	u64 kickoff_count;
 	u64 panel_active;
 
-	/* persistence mode on/off */
-	bool persist_mode;
-
 	/* HDR properties of display panel*/
 	struct mdss_panel_hdr_properties hdr_properties;
 };
@@ -796,7 +777,6 @@ struct mdss_panel_timing {
 struct mdss_panel_data {
 	struct mdss_panel_info panel_info;
 	void (*set_backlight) (struct mdss_panel_data *pdata, u32 bl_level);
-	int (*apply_display_setting)(struct mdss_panel_data *pdata, u32 mode);
 	unsigned char *mmss_cc_base;
 
 	/**
@@ -813,7 +793,6 @@ struct mdss_panel_data {
 	 */
 	int (*event_handler) (struct mdss_panel_data *pdata, int e, void *arg);
 	struct device_node *(*get_fb_node)(struct platform_device *pdev);
-	bool (*get_idle)(struct mdss_panel_data *pdata);
 
 	struct list_head timings_list;
 	struct mdss_panel_timing *current_timing;
@@ -839,31 +818,18 @@ struct mdss_panel_debugfs_info {
  * mdss_get_panel_framerate() - get panel frame rate based on panel information
  * @panel_info:	Pointer to panel info containing all panel information
  */
-static inline u32 mdss_panel_get_framerate(struct mdss_panel_info *panel_info,
-					   u32 flags)
+static inline u32 mdss_panel_get_framerate(struct mdss_panel_info *panel_info)
 {
 	u32 frame_rate, pixel_total;
 	u64 rate;
-	struct mdss_panel_data *panel_data =
-			container_of(panel_info, typeof(*panel_data),
-					panel_info);
-	bool idle = false;
 
-	if (panel_info == NULL) {
-		frame_rate = DEFAULT_FRAME_RATE;
-		goto end;
-	}
+	if (panel_info == NULL)
+		return DEFAULT_FRAME_RATE;
 
 	switch (panel_info->type) {
 	case MIPI_VIDEO_PANEL:
 	case MIPI_CMD_PANEL:
 		frame_rate = panel_info->mipi.frame_rate;
-		if (panel_data->get_idle)
-			idle = panel_data->get_idle(panel_data);
-		if (idle)
-			frame_rate = panel_info->mipi.frame_rate_idle;
-		else
-			frame_rate = panel_info->mipi.frame_rate;
 		break;
 	case EDP_PANEL:
 		frame_rate = panel_info->edp.frame_rate;
@@ -873,7 +839,9 @@ static inline u32 mdss_panel_get_framerate(struct mdss_panel_info *panel_info,
 		break;
 	case DTV_PANEL:
 		if (panel_info->dynamic_fps) {
-			frame_rate = panel_info->lcdc.frame_rate;
+			frame_rate = panel_info->lcdc.frame_rate / 1000;
+			if (panel_info->lcdc.frame_rate % 1000)
+				frame_rate += 1;
 			break;
 		}
 	default:
@@ -886,7 +854,7 @@ static inline u32 mdss_panel_get_framerate(struct mdss_panel_info *panel_info,
 			  panel_info->lcdc.v_pulse_width +
 			  panel_info->yres);
 		if (pixel_total) {
-			rate = panel_info->clk_rate * KHZ_TO_HZ;
+			rate = panel_info->clk_rate;
 			do_div(rate, pixel_total);
 			frame_rate = (u32)rate;
 		} else {
@@ -894,15 +862,6 @@ static inline u32 mdss_panel_get_framerate(struct mdss_panel_info *panel_info,
 		}
 		break;
 	}
-end:
-	if (flags == FPS_RESOLUTION_KHZ) {
-		if (!(frame_rate / KHZ_TO_HZ))
-			frame_rate *= KHZ_TO_HZ;
-	} else if (flags == FPS_RESOLUTION_HZ) {
-		if (frame_rate / KHZ_TO_HZ)
-			frame_rate /= KHZ_TO_HZ;
-	}
-
 	return frame_rate;
 }
 
@@ -1207,3 +1166,4 @@ static inline struct mdss_panel_timing *mdss_panel_get_timing_by_name(
 		const char *name) { return NULL; };
 #endif
 #endif /* MDSS_PANEL_H */
+
