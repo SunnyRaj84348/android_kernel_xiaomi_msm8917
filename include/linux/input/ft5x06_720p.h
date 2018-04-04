@@ -61,23 +61,30 @@
 
 /*Firmware vendors*/
 #define VENDOR_O_FILM		0x51
-#define VENDOR_Lens		0x3B
-#define VENDOR_DS			0x53
+#define VENDOR_MUTTO		0x53
+#define VENDOR_BIEL_1080P	0x3B
+#define VENDOR_TPK_1080P         0x5C
+#define VENDOR_BIEL_720P	          0xF1
+#define VENDOR_TPK_720P             0xF2
+#define VENDOR_OUFEI_720P    0xF3
+#define VENDOR_LENS_720P    0xF4
+
+
+#define VENDOR_WINTEK		0x89
+#define VENDOR_GIS		        0x8F
+
 
 /*IC name*/
-
-#define TP_IC_FT5X06               0x55
-#define TP_IC_FT5606               0x08
-#define TP_IC_FT5X16               0x0A
-#define TP_IC_FT6208               0x05
-#define TP_IC_FT6X06               0x06
-#define TP_IC_FT6X36               0x36
-#define TP_IC_FT5336               0x14
-#define TP_IC_FT3316               0x13
-#define TP_IC_FT5436i              0x12
-#define TP_IC_FT5336i              0x11
-#define TP_IC_FT5346               0x54
-
+#define IC_FT5X06               0x55
+#define IC_FT5606               0x08
+#define IC_FT5X16               0x0A
+#define IC_FT6208               0x05
+#define IC_FT6X06               0x06
+#define IC_FT6X36               0x36
+#define IC_FT5336               0x14
+#define IC_FT3316               0x13
+#define IC_FT5436i              0x12
+#define IC_FT5336i              0x11
 
 /*TP Color*/
 #define TP_White      0x31
@@ -86,17 +93,13 @@
 
 /*TP Maker*/
 #define TP_OUFEI      0x34
-#define  TP_LENS      0x32
-#define  TP_DS           0x45
+#define TP_LENS      0x32
+#define TP_Biel        0x31
 
 /*LCD Maker*/
-#define TP_TIANMA      0x36
-
-#define TP_EBBG          0x37
-
-/*PROJECT Id*/
-#define PROJECT_C3B 0x0c
-#define PROJECT_C3N 0xc3
+#define LCD_TIANMA      0x36
+#define LCD_EBBG      0x37
+#define LCD_BOE      0x35
 
 /* power register bits*/
 #define FT_PMODE_ACTIVE     0x00
@@ -298,7 +301,6 @@ struct ft5x06_ts_data {
 
 #define CTP_IC_TYPE_0 0x12
 #define CTP_IC_TYPE_1 0x14
-#define CTP_IC_TYPE_2 0x54
 
 #define CTP_SYS_APK_UPDATE 0
 
@@ -308,29 +310,13 @@ struct ft5x06_ts_data {
 #define CTP_CHARGER_DETECT 1
 
 #define CTP_PROC_INTERFACE 1
+#define CTP_LOCKDOWN_INFO  1
 
 
+#define WT_ADD_CTP_INFO   1
 
-#if CTP_PROC_INTERFACE
-extern int fts_open_short_test(char *ini_file_name, char *bufdest, ssize_t *pinumread);
-#endif
-#define WT_ADD_CTP_INFO    1
-#define WT_CTP_GESTURE_SUPPORT 1
-#define KEYCODE_WAKEUP 143
-#define MXT_INPUT_EVENT_START			0
-#define MXT_INPUT_EVENT_SENSITIVE_MODE_OFF	0
-#define MXT_INPUT_EVENT_SENSITIVE_MODE_ON	1
-#define MXT_INPUT_EVENT_STYLUS_MODE_OFF		2
-#define MXT_INPUT_EVENT_STYLUS_MODE_ON		3
-#define MXT_INPUT_EVENT_WAKUP_MODE_OFF		4
-#define MXT_INPUT_EVENT_WAKUP_MODE_ON		5
-#define MXT_INPUT_EVENT_EDGE_DISABLE		6
-#define MXT_INPUT_EVENT_EDGE_FINGER		7
-#define MXT_INPUT_EVENT_EDGE_HANDGRIP		8
-#define MXT_INPUT_EVENT_EDGE_FINGER_HANDGRIP	9
-#define MXT_INPUT_EVENT_END			9
-#define CTP_DEBUG_ON 0
-#define CTP_DEBUG_FUNC_ON 1
+#define CTP_DEBUG_ON 1
+#define CTP_DEBUG_FUNC_ON 0
 #define CTP_INFO(fmt, arg...)           printk("FT5X06-TP-TAG INFO:"fmt"\n", ##arg)
 
 #define CTP_ERROR(fmt, arg...)          printk("FT5X06-TP-TAG ERROR:"fmt"\n", ##arg)
