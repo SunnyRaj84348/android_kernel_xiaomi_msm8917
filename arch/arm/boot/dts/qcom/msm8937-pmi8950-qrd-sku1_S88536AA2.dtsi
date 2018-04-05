@@ -326,3 +326,14 @@
 	/delete-node/ qcom,flash_1;
 	/delete-node/ qcom,torch_1;
 };
+
+&firmware {
+	android {
+		fstab {
+			/delete-node/ vendor;
+			system {
+				dev = "/dev/block/platform/soc/7824900.sdhci/by-name/system";
+			};
+		};
+	};
+};
