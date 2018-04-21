@@ -2274,9 +2274,12 @@ static void smbchg_parallel_usb_enable(struct smbchg_chip *chip,
 		dev_err(chip->dev,
 			"Couldn't set Vflt on parallel psy rc: %d\n", rc);
 		return;
-	} else {
-		power_supply_set_voltage_limit(chip->usb_psy,
-				(chip->vfloat_mv + 50) * 1000);
+	}
+	rc = power_supply_set_voltage_limit(chip->usb_psy,
+			(chip->vfloat_mv + 50) * 1000);
+	if (rc < 0) {
+		dev_err(chip->dev,
+			"Couldn't set Vflt on usb psy rc: %d\n", rc);
 	}
 	/* Set USB ICL */
 	target_icl_ma = get_effective_result_locked(chip->usb_icl_votable);
@@ -3345,6 +3348,12 @@ static int smbchg_float_voltage_set(struct smbchg_chip *chip, int vfloat_mv)
 				rc);
 	}
 
+	rc = power_supply_set_voltage_limit(chip->usb_psy,
+				(vfloat_mv * 1000) + 50);
+	if (rc)
+		dev_err(chip->dev, "Couldn't set float voltage on usb psy rc: %d\n",
+			rc);
+
 	rc = smbchg_sec_masked_write(chip, chip->chgr_base + VFLOAT_CFG_REG,
 			VFLOAT_MASK, temp);
 
@@ -3352,9 +3361,6 @@ static int smbchg_float_voltage_set(struct smbchg_chip *chip, int vfloat_mv)
 		dev_err(chip->dev, "Couldn't set float voltage rc = %d\n", rc);
 	else
 		chip->vfloat_mv = vfloat_mv;
-
-	power_supply_set_voltage_limit(chip->usb_psy,
-				(chip->vfloat_mv * 1000));
 
 	return rc;
 }
