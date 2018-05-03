@@ -2886,3 +2886,4 @@ int mdss_dsi_panel_init(struct device_node *node,
 	ctrl_pdata->panel_data.get_idle = mdss_dsi_panel_get_idle_mode;
 	return 0;
 }
+
