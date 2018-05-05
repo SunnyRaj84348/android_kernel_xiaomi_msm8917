@@ -339,6 +339,30 @@ config DEDUCE_WAKEUP_REASONS
 	bool
 	default n
 
+config QUICK_WAKEUP
+	bool "Quick wakeup"
+	depends on SUSPEND
+	default y
+	---help---
+	  Allow kernel driver to do periodic jobs without resuming the full system
+	  This option can increase battery life on android powered smartphone.
+	  
+config DEDUCE_WAKEUP_REASONS
+	bool
+	default n
+
+config PARTIALRESUME
+	bool "Partial-resume framework"
+	select DEDUCE_WAKEUP_REASONS
+	---help---
+	  Provides hooks for drivers to register partial-resume handlers.
+	  Similar to suspend_again support already in kernel, except that it
+	  operates with kernel threads unfrozen and userspace still frozen,
+	  allowing callbacks to block on work queues and kernel threads.
+	  Partial resume will occur only if all wakeup sources have
+	  partial-resume handlers associated with them, and they all return
+	  true.
+
 config SUSPEND_SKIP_SYNC
 	bool "Skip kernel's sys_sync() on suspend to RAM/standby"
 	depends on SUSPEND
