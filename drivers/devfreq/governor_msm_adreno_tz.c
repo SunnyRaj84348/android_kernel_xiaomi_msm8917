@@ -367,16 +367,29 @@ static int tz_get_target_freq(struct devfreq *devfreq, unsigned long *freq,
 		return result;
 	}
 
-	*freq = stats.current_frequency;
-	priv->bin.total_time += stats.total_time;
-	priv->bin.busy_time += stats.busy_time;
+	/* Prevent overflow */
+	if (stats.busy_time >= (1 << 24) || stats.total_time >= (1 << 24)) {
+		stats.busy_time >>= 7;
+		stats.total_time >>= 7;
+
+	}
+
+	*freq = stats.current_frequency;	
+#ifdef CONFIG_ADRENO_IDLER
+ 	if (adreno_idler(stats, devfreq, freq)) {
+ 		/* adreno_idler has asked to bail out now */
+ 		return 0;
+ 	}
+#endif
+ 	priv->bin.total_time += stats.total_time;
+ 	priv->bin.busy_time += stats.busy_time;
 
 	if (stats.private_data)
 		context_count =  *((int *)stats.private_data);
 
-	/* Update the GPU load statistics */
-	compute_work_load(&stats, priv, devfreq);
-	/*
+ 	/* Update the GPU load statistics */
+ 	compute_work_load(&stats, priv, devfreq);
+ 	/*
 	 * Do not waste CPU cycles running this algorithm if
 	 * the GPU just started, or if less than FLOOR time
 	 * has passed since the last run or the gpu hasn't been
