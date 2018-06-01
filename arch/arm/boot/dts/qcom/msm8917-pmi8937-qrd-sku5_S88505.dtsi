@@ -433,10 +433,10 @@ qrd_batterydata: qcom,battery-data {
 		qcom,rpull-up-kohm = <68>;
 		qcom,vref-batt-therm = <1800000>;
 		#include "batterydata-qrd-sku2-4v35-2590mah.dtsi"
-		#include "batterydata-wingtech-desai_SAMSUNG-4v4-4000mah.dtsi"
-		#include "batterydata-wingtech-feimaotui_SONY-4v4-4000mah.dtsi"
-		#include "batterydata-wingtech-xingwangda_ATL-4v4-4000mah.dtsi"
-		#include "batterydata-wingtech-guangyu_Coslight-4v4-4000mah.dtsi"
+		#include "batterydata-wingtech-desai_SAMSUNG-4v4-3000mah.dtsi"
+		#include "batterydata-wingtech-feimaotui_SONY-4v4-3000mah.dtsi"
+		#include "batterydata-wingtech-xingwangda_ATL-4v4-3000mah.dtsi"
+		#include "batterydata-wingtech-guangyu_Coslight-4v4-3000mah.dtsi"
 	};
 
 };
