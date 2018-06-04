@@ -25,7 +25,9 @@
 	pinctrl-0 = <&cdc_pdm_lines_sus &cdc_pdm_lines_2_sus>;
 	pinctrl-1 = <&cdc_pdm_lines_act &cdc_pdm_lines_2_act>;
 	qcom,cdc-us-euro-gpios;
+	qcom,msm-spk-ext-pa = <&tlmm 124 0>;
 	qcom,msm-hs-micbias-type = "internal";
+	qcom,msm-micbias2-ext-cap;
 	qcom,audio-routing =
 		"RX_BIAS", "MCLK",
 		"SPK_RX_BIAS", "MCLK",
