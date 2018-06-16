@@ -105,13 +105,13 @@ enum {
 #define MICBIAS_MIN_VAL 1600000
 #define MICBIAS_STEP_SIZE 50000
 
-#define DEFAULT_BOOST_VOLTAGE 5000
-#define MIN_BOOST_VOLTAGE 4000
+#define DEFAULT_BOOST_VOLTAGE 5250
+#define MIN_BOOST_VOLTAGE 4700
 #define MAX_BOOST_VOLTAGE 5550
 #define BOOST_VOLTAGE_STEP 50
 
-#define MSM8X16_WCD_MBHC_BTN_COARSE_ADJ  100 /* in mV */
-#define MSM8X16_WCD_MBHC_BTN_FINE_ADJ 12 /* in mV */
+#define MSM8X16_WCD_MBHC_BTN_COARSE_ADJ  50 /* in mV */
+#define MSM8X16_WCD_MBHC_BTN_FINE_ADJ 10 /* in mV */
 
 #define VOLTAGE_CONVERTER(value, min_value, step_size)\
 	((value - min_value)/step_size)
