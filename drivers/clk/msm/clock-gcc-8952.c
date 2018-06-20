@@ -407,7 +407,7 @@ static struct pll_vote_clk gpll6_clk_src = {
 	.base = &virt_bases[GCC_BASE],
 	.c = {
 		.parent = &xo_clk_src.c,
-		.rate = 1080000000,
+		.rate = 1280000000,
 		.dbg_name = "gpll6_clk_src",
 		.ops = &clk_ops_pll_vote,
 		CLK_INIT(gpll6_clk_src.c),
@@ -664,6 +664,7 @@ static struct clk_freq_tbl ftbl_gcc_camss_vfe0_1_clk_8937[] = {
 	F( 360000000,          gpll6,    3,    0,     0),
 	F( 400000000,          gpll0,    2,    0,     0),
 	F( 432000000,          gpll6,  2.5,    0,     0),
+	F( 504000000,          gpll6,  2.5,    0,     0),
 	F_END
 };
 
@@ -4232,11 +4233,11 @@ static void override_for_8937(int speed_bin)
 	OVERRIDE_FTABLE(csi2, ftbl_gcc_camss_csi0_2_clk, 8937);
 	OVERRIDE_FMAX4(vfe0,
 		LOWER, 160000000, LOW, 308570000, NOMINAL, 400000000,
-		NOM_PLUS, 432000000);
+		NOM_PLUS, 504000000);
 	OVERRIDE_FTABLE(vfe0, ftbl_gcc_camss_vfe0_1_clk, 8937);
 	OVERRIDE_FMAX4(vfe1,
 		LOWER, 160000000, LOW, 308570000, NOMINAL, 400000000,
-		NOM_PLUS, 432000000);
+		NOM_PLUS, 504000000);
 	OVERRIDE_FTABLE(vfe1, ftbl_gcc_camss_vfe0_1_clk, 8937);
 
 	if (speed_bin) {
