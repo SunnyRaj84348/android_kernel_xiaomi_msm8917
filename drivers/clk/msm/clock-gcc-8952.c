@@ -146,7 +146,7 @@ static DEFINE_VDD_REGULATORS(vdd_hf_pll, VDD_HF_PLL_NUM, 2,
 
 static struct pll_freq_tbl apcs_cci_pll_freq[] = {
 	F_APCS_PLL(307200000, 16, 0x0, 0x1, 0x0, 0x0, 0x0),
-	F_APCS_PLL(614400000, 32, 0x1, 0x4, 0x0, 0x0, 0x0),
+	F_APCS_PLL(634400000, 33, 0x1, 0x4, 0x0, 0x0, 0x0),
 };
 
 static struct pll_clk a53ss_cci_pll = {
@@ -541,6 +541,7 @@ static struct clk_freq_tbl ftbl_gcc_camss_csi0_2_clk_8937[] = {
 	F( 160000000,          gpll0,    5,    0,     0),
 	F( 200000000,          gpll0,    4,    0,     0),
 	F( 266670000,          gpll0,    3,    0,     0),
+	F( 320000000,          gpll0,    2.5,    0,     0),
 	F_END
 };
 
@@ -1293,6 +1294,7 @@ static struct clk_freq_tbl ftbl_gcc_camss_jpeg0_clk_8937[] = {
 	F( 266666667,          gpll0,    3,    0,     0),
 	F( 308570000,          gpll6,  3.5,    0,     0),
 	F( 320000000,          gpll0,  2.5,    0,     0),
+	F( 350000000,          gpll0,    2,    0,     0),
 	F_END
 };
 
@@ -4218,13 +4220,13 @@ static void override_for_8937(int speed_bin)
 
 	OVERRIDE_FMAX1(cci, LOWER, 37500000);
 	OVERRIDE_FMAX3(csi0,
-		LOWER, 100000000, LOW, 200000000, NOMINAL, 266670000);
+		LOWER, 100000000, LOW, 200000000, NOMINAL, 320000000);
 	OVERRIDE_FTABLE(csi0, ftbl_gcc_camss_csi0_2_clk, 8937);
 	OVERRIDE_FMAX3(csi1,
-		LOWER, 100000000, LOW, 200000000, NOMINAL, 266670000);
+		LOWER, 100000000, LOW, 200000000, NOMINAL, 320000000);
 	OVERRIDE_FTABLE(csi1, ftbl_gcc_camss_csi0_2_clk, 8937);
 	OVERRIDE_FMAX3(csi2,
-		LOWER, 100000000, LOW, 200000000, NOMINAL, 266670000);
+		LOWER, 100000000, LOW, 200000000, NOMINAL, 320000000);
 	OVERRIDE_FTABLE(csi2, ftbl_gcc_camss_csi0_2_clk, 8937);
 	OVERRIDE_FMAX4(vfe0,
 		LOWER, 160000000, LOW, 308570000, NOMINAL, 400000000,
@@ -4255,7 +4257,7 @@ static void override_for_8937(int speed_bin)
 	OVERRIDE_FTABLE(cpp, ftbl_gcc_camss_cpp_clk, 8937);
 	OVERRIDE_FMAX5(jpeg0,
 		LOWER, 133330000, LOW, 200000000, NOMINAL, 266670000,
-		NOM_PLUS, 308570000, HIGH, 320000000);
+		NOM_PLUS, 308570000, HIGH, 350000000);
 	OVERRIDE_FTABLE(jpeg0, ftbl_gcc_camss_jpeg0_clk, 8937);
 	OVERRIDE_FMAX2(csi0phytimer, LOWER, 100000000, LOW, 200000000);
 	OVERRIDE_FMAX2(csi1phytimer, LOWER, 100000000, LOW, 200000000);
