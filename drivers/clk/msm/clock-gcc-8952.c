@@ -146,7 +146,7 @@ static DEFINE_VDD_REGULATORS(vdd_hf_pll, VDD_HF_PLL_NUM, 2,
 
 static struct pll_freq_tbl apcs_cci_pll_freq[] = {
 	F_APCS_PLL(307200000, 16, 0x0, 0x1, 0x0, 0x0, 0x0),
-	F_APCS_PLL(634400000, 33, 0x1, 0x4, 0x0, 0x0, 0x0),
+	F_APCS_PLL(614400000, 32, 0x1, 0x4, 0x0, 0x0, 0x0),
 };
 
 static struct pll_clk a53ss_cci_pll = {
