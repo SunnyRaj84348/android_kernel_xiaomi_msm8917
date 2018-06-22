@@ -1543,6 +1543,12 @@ static irqreturn_t mhi_dev_isr(int irq, void *dev_id)
 {
 	struct mhi_dev *mhi = dev_id;
 
+	if (!atomic_read(&mhi->mhi_dev_wake)) {
+		pm_stay_awake(mhi->dev);
+		atomic_set(&mhi->mhi_dev_wake, 1);
+		mhi_log(MHI_MSG_VERBOSE, "acquiring mhi wakelock in ISR\n");
+	}
+
 	disable_irq_nosync(mhi->mhi_irq);
 	schedule_work(&mhi->chdb_ctrl_work);
 	mhi_log(MHI_MSG_VERBOSE, "mhi irq triggered\n");
@@ -2370,8 +2376,10 @@ static void mhi_dev_enable(struct work_struct *work)
 		return;
 	}
 
-	if (mhi_ctx->config_iatu || mhi_ctx->mhi_int)
+	if (mhi_ctx->config_iatu || mhi_ctx->mhi_int) {
+		mhi_ctx->mhi_int_en = true;
 		enable_irq(mhi_ctx->mhi_irq);
+	}
 
 	mhi_update_state_info(MHI_DEV_UEVENT_CTRL,
 						MHI_STATE_CONFIGURED);
