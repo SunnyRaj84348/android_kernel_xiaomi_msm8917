@@ -6266,6 +6266,7 @@ EXPORT_SYMBOL_GPL(yield_to);
  * This task is about to go to sleep on IO. Increment rq->nr_iowait so
  * that process accounting knows that this is a task in IO wait state.
  */
+/*
 void __sched io_schedule(void)
 {
 	struct rq *rq = raw_rq();
@@ -6279,6 +6280,8 @@ void __sched io_schedule(void)
 	atomic_dec(&rq->nr_iowait);
 	delayacct_blkio_end();
 }
+*/
+
 EXPORT_SYMBOL(io_schedule);
 
 long __sched io_schedule_timeout(long timeout)
