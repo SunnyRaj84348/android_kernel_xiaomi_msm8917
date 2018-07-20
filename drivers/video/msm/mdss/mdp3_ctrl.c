@@ -1504,11 +1504,6 @@ static int mdp3_ctrl_display_commit_kickoff(struct msm_fb_data_type *mfd,
 		}
 		complete_all(&mdp3_session->secure_completion);
 		mdp3_ctrl_notify(mdp3_session, MDP_NOTIFY_FRAME_DONE);
-		if (mdp3_bufq_count(&mdp3_session->bufq_out) > 0) {
-			data = mdp3_bufq_pop(&mdp3_session->bufq_out);
-			if (data)
-				mdp3_put_img(data, MDP3_CLIENT_DMA_P);
-		}
 		mdp3_session->vsync_before_commit = 0;
 		mutex_unlock(&mdp3_session->lock);
 		return 0;
