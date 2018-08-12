@@ -2213,7 +2213,6 @@ static int dwc3_msm_resume(struct dwc3_msm *mdwc)
 	/* Enable bus voting */
 	if (mdwc->bus_perf_client) {
 		mdwc->bus_vote = 1;
-		schedule_work(&mdwc->bus_vote_w);
 	}
 
 
