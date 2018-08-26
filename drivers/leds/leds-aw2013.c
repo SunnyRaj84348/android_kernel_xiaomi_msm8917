@@ -1,18 +1,3 @@
-/*
- * Copyright (c) 2015, 2018 The Linux Foundation. All rights reserved.
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 and
- * only version 2 as published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- */
-
-#include <linux/delay.h>
 #include <linux/i2c.h>
 #include <linux/interrupt.h>
 #include <linux/miscdevice.h>
@@ -573,31 +558,6 @@ static ssize_t blink_store(struct device *dev,
 }
 static DEVICE_ATTR(blink, 0664, blink_show, blink_store);
 
-static DEVICE_ATTR(blink, 0664, NULL, aw2013_store_blink);
-static DEVICE_ATTR(led_time, 0664, aw2013_led_time_show, aw2013_led_time_store);
-
-static struct attribute *aw2013_led_attributes[] = {
-	&dev_attr_blink.attr,
-	&dev_attr_led_time.attr,
-	NULL,
-};
-
-static struct attribute_group aw2013_led_attr_group = {
-	.attrs = aw2013_led_attributes
-};
-
-static int aw_2013_check_chipid(struct aw2013_led *led)
-{
-	u8 val;
-
-	aw2013_write(led, AW_REG_RESET, AW_LED_RESET_MASK);
-	usleep_range(AW_LED_RESET_DELAY-2, AW_LED_RESET_DELAY);
-	aw2013_read(led, AW_REG_RESET, &val);
-	if (val == AW2013_CHIPID)
-		return 0;
-	else
-		return -EINVAL;
-}
 
 static int create_aw2013_led(const struct aw2013_led *template,
 	struct aw2013_led_data *led_dat, struct device *parent,
