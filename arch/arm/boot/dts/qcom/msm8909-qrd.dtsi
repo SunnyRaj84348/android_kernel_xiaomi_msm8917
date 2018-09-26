@@ -13,6 +13,7 @@
 #include "msm8909.dtsi"
 #include "msm8909-pm8909.dtsi"
 #include "msm8909-pinctrl.dtsi"
+#include "msm8909-regulator.dtsi"
 #include "msm8909-qrd_qseev4.dtsi"
 
 / {

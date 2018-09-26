@@ -1,4 +1,4 @@
-/* Copyright (c) 2009-2016, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2009-2017, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -110,10 +110,10 @@ int32_t msm_flash_create_v4lsubdev(struct platform_device *pdev,
 int32_t msm_led_i2c_flash_create_v4lsubdev(void *data);
 
 int32_t msm_led_i2c_trigger_get_subdev_id(struct msm_flash_ctrl_t *fctrl,
-	void *arg);
+	void __user *arg);
 
 int32_t msm_led_i2c_trigger_config(struct msm_flash_ctrl_t *fctrl,
-	void *data);
+	void __user *data);
 
 int msm_flash_led_init(struct msm_flash_ctrl_t *fctrl);
 int msm_flash_led_release(struct msm_flash_ctrl_t *fctrl);

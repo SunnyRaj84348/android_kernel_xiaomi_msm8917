@@ -144,13 +144,13 @@
 		};
 
 		modem_adsp_mem: modem_adsp_region@0 {
-			reg = <0x0 0x88000000 0x0 0x05500000>;
+			reg = <0x0 0x88000000 0x0 0x04f00000>;
 			compatible = "removed-dma-pool";
 			no-map;
 		};
 
 		peripheral_mem: pheripheral_region@0 {
-			reg = <0x0 0x8d500000 0x0 0x0700000>;
+			reg = <0x0 0x8cf00000 0x0 0x0700000>;
 			compatible = "removed-dma-pool";
 			no-map;
 		};
@@ -180,6 +180,17 @@
 		cont_splash_mem: splash_region@83000000 {
 			reg = <0x0 0x83000000 0x0 0xc00000>;
 		};
+
+		/* global autoconfigured region for contiguous allocations */
+		linux,cma {
+			compatible = "shared-dma-pool";
+			alloc-ranges = <0 0x00000000 0 0xffffffff>;
+			reusable;
+			alignment = <0 0x400000>;
+			size = <0 0xc00000>;
+			linux,cma-default;
+		};
+
 	};
 
 	soc: soc { };
