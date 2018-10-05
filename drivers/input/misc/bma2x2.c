@@ -1871,8 +1871,8 @@ static int bma2x2_check_chip_id(struct i2c_client *client,
 							&chip_id);
 		if (err < 0) {
 			dev_err(&client->dev,
-			"Bosch Sensortec Device not found"
-			"i2c bus read error, read chip_id:%d\n", chip_id);
+				"Bosch Sensortec Device not foundi2c bus read error, read chip_id:%d\n",
+				chip_id);
 			err = -ENODEV;
 			return err;
 		}
@@ -1892,9 +1892,8 @@ static int bma2x2_check_chip_id(struct i2c_client *client,
 			return err;
 		} else if (read_count == CHECK_CHIP_ID_TIME_MAX) {
 			dev_err(&client->dev,
-			"Failed!Bosch Sensortec Device"
-			" not found, mismatch chip_id:%d\n",
-						chip_id);
+				"Failed!Bosch Sensortec Device not found, mismatch chip_id:%d\n",
+				chip_id);
 			err = -ENODEV;
 			return err;
 		}
@@ -3752,6 +3751,7 @@ static int bma2x2_write_reg(struct i2c_client *client, unsigned char addr,
 		unsigned char *data)
 {
 	int comres = 0;
+
 	comres = bma2x2_smbus_write_byte(client, addr, data);
 
 	return comres;

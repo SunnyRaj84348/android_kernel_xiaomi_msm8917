@@ -1250,10 +1250,10 @@ CSID_TG:
 	/*
 	 * Update the subdevice id of flash-src based on availability in kernel.
 	 */
-	/*if (strlen(slave_info->flash_name) == 0) {
+	if (strlen(slave_info->flash_name) == 0) {
 		s_ctrl->sensordata->sensor_info->
 			subdev_id[SUB_MODULE_LED_FLASH] = -1;
-	}*/
+	}
 
 	/*
 	 * Create /dev/videoX node, comment for now until dummy /dev/videoX
