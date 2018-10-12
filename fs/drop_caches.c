@@ -8,7 +8,9 @@
 #include <linux/writeback.h>
 #include <linux/sysctl.h>
 #include <linux/gfp.h>
-#include <linux/fb.h>
+#if defined(CONFIG_POWERSUSPEND)
+#include <linux/powersuspend.h>
+#endif
 #include <linux/delay.h>
 #include "internal.h"
 
@@ -81,6 +83,7 @@ int drop_caches_sysctl_handler(struct ctl_table *table, int write,
 	return 0;
 }
 
+#ifdef CONFIG_POWERSUSPEND
 static void drop_caches_suspend(struct work_struct *work);
 static DECLARE_WORK(drop_caches_suspend_work, drop_caches_suspend);
 
@@ -95,31 +98,19 @@ static void drop_caches_suspend(struct work_struct *work)
         drop_slab();
 }
 
-static int fb_notifier(struct notifier_block *self,
-			unsigned long event, void *data)
+static void __ref drop_caches_power_suspend(struct power_suspend *handler)
 {
-	struct fb_event *evdata = (struct fb_event *)data;
-
-	if ((event == FB_EVENT_BLANK) && evdata && evdata->data) {
-		int blank = *(int *)evdata->data;
-
-		if (blank == FB_BLANK_POWERDOWN) {
 			schedule_work_on(0, &drop_caches_suspend_work);
-			return NOTIFY_OK;
-		}
-		return NOTIFY_OK;
-	}
-	return NOTIFY_DONE;
 }
 
-static struct notifier_block fb_notifier_block = {
-	.notifier_call = fb_notifier,
-	.priority = -1,
+static struct power_suspend drop_caches_power_suspend_driver = {
+	.suspend = drop_caches_power_suspend,
 };
 
 static int __init drop_caches_init(void)
 {
-	fb_register_client(&fb_notifier_block);
+	register_power_suspend(&drop_caches_power_suspend_driver);
 	return 0;
 }
 late_initcall(drop_caches_init);
+#endif
