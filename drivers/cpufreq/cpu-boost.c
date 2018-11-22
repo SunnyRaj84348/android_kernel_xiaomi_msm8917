@@ -29,26 +29,21 @@ struct cpu_sync {
 	int cpu;
 	unsigned int input_boost_min;
 	unsigned int input_boost_freq;
-	unsigned int input_boost_freq_s2;
 };
 
 static DEFINE_PER_CPU(struct cpu_sync, sync_info);
 
-static unsigned int input_boost_enabled = 1;
+static unsigned int input_boost_enabled = 0;
 module_param(input_boost_enabled, uint, 0644);
 
 static unsigned int input_boost_ms = 1500;
 module_param(input_boost_ms, uint, 0644);
 
-static unsigned int input_boost_ms_s2 = 0;
-module_param(input_boost_ms_s2, uint, 0644);
-
-static bool sched_boost_on_input;
+static bool sched_boost_on_input = 0;
 module_param(sched_boost_on_input, bool, 0644);
 
 static bool sched_boost_active;
 
-static struct delayed_work input_boost_work_s2;
 static struct delayed_work input_boost_rem;
 static u64 last_input_time;
 
@@ -85,11 +80,7 @@ static int set_input_boost_freq(const char *buf, const struct kernel_param *kp)
 		if (cpu > num_possible_cpus())
 			return -EINVAL;
 
-		if (step == 1)
-			per_cpu(sync_info, i).input_boost_freq = val;
-		else if (step == 2)
-			per_cpu(sync_info, i).input_boost_freq_s2 = val;
-
+		per_cpu(sync_info, cpu).input_boost_freq = val;
 		cp = strchr(cp, ' ');
 		cp++;
 	}
@@ -97,56 +88,27 @@ static int set_input_boost_freq(const char *buf, const struct kernel_param *kp)
 out:
 	return 0;
 }
-static inline int set_input_boost_freq_s1(const char *buf, const struct kernel_param *kp)
-{
-	return set_input_boost_freq(buf, kp, 1);
-}
 
-static inline int set_input_boost_freq_s2(const char *buf, const struct kernel_param *kp)
+static int get_input_boost_freq(char *buf, const struct kernel_param *kp)
 {
-	return set_input_boost_freq(buf, kp, 2);
-}
-
-static int get_input_boost_freq(char *buf, const struct kernel_param *kp, int step)
-{
-	int cnt = 0, cpu, target_input_freq;
+	int cnt = 0, cpu;
 	struct cpu_sync *s;
 
 	for_each_possible_cpu(cpu) {
 		s = &per_cpu(sync_info, cpu);
-		if (step == 1)
-			target_input_freq = s->input_boost_freq;
-		else if (step == 2)
-			target_input_freq = s->input_boost_freq_s2;
-
 		cnt += snprintf(buf + cnt, PAGE_SIZE - cnt,
-				"%d:%u ", cpu, target_input_freq);
+				"%d:%u ", cpu, s->input_boost_freq);
 	}
 	cnt += snprintf(buf + cnt, PAGE_SIZE - cnt, "\n");
 	return cnt;
 }
 
-static inline int get_input_boost_freq_s1(char *buf, const struct kernel_param *kp)
-{
-	return get_input_boost_freq(buf, kp, 1);
-}
-
-static inline int get_input_boost_freq_s2(char *buf, const struct kernel_param *kp)
-{
-	return get_input_boost_freq(buf, kp, 2);
-}
-
 static const struct kernel_param_ops param_ops_input_boost_freq = {
-	.set = set_input_boost_freq_s1,
-	.get = get_input_boost_freq_s1,
+	.set = set_input_boost_freq,
+	.get = get_input_boost_freq,
 };
 module_param_cb(input_boost_freq, &param_ops_input_boost_freq, NULL, 0644);
 
-static const struct kernel_param_ops param_ops_input_boost_freq_s2 = {
-	.set = set_input_boost_freq_s2,
-	.get = get_input_boost_freq_s2,
-};
-module_param_cb(input_boost_freq_s2, &param_ops_input_boost_freq_s2, NULL, 0644);
 /*
  * The CPUFREQ_ADJUST notifier is used to override the current policy min to
  * make sure policy min >= boost_min. The cpufreq framework then does the job
@@ -199,7 +161,6 @@ static int boost_adjust_notify(struct notifier_block *nb, unsigned long val,
 
 static struct notifier_block boost_adjust_nb = {
 	.notifier_call = boost_adjust_notify,
-	.priority = INT_MAX-2,
 };
 
 static void update_policy_online(void)
@@ -277,7 +238,6 @@ static void do_input_boost(struct kthread_work *work)
 		return;
 
 	cancel_delayed_work_sync(&input_boost_rem);
-
 	if (sched_boost_active) {
 		sched_set_boost(0);
 		sched_boost_active = false;
