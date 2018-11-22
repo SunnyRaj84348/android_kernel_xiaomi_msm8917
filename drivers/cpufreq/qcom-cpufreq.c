@@ -23,10 +23,7 @@
 #include <linux/cpu.h>
 #include <linux/cpumask.h>
 #include <linux/suspend.h>
-<<<<<<< HEAD
-=======
 #include <linux/clk.h>
->>>>>>> d9cb2b245245... DRIVERS: qcom-cpufreq: Adapt for Opensource Clock FW
 #include <linux/clk/msm-clk-provider.h>
 #include <linux/err.h>
 #include <linux/platform_device.h>
