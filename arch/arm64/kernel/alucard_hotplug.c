@@ -3,6 +3,8 @@
  *
  * Copyright 2012 Alucard_24@XDA
  *
+ * Copyright 2018 pascua28@XDA
+ *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
  * may be copied, distributed, and modified under those terms.
@@ -62,7 +64,6 @@ static struct hotplug_tuners {
 	defined(CONFIG_HAS_EARLYSUSPEND)
 	unsigned int hotplug_suspend;
 	bool suspended;
-	bool force_cpu_up;
 	struct mutex alu_hotplug_mutex;
 #endif
 } hotplug_tuners_ins = {
@@ -75,7 +76,6 @@ static struct hotplug_tuners {
 	defined(CONFIG_HAS_EARLYSUSPEND)
 	.hotplug_suspend = 1,
 	.suspended = false,
-	.force_cpu_up = false,
 #endif
 };
 
@@ -164,10 +164,7 @@ static void __ref hotplug_work_fn(struct work_struct *work)
 	int offline_cpu = 0;
 	int online_cpus = 0;
 	unsigned int rq_avg;
-#if defined(CONFIG_POWERSUSPEND) || \
-	defined(CONFIG_HAS_EARLYSUSPEND)
-	bool force_up = hotplug_tuners_ins.force_cpu_up;
-#endif
+
 	HOTPLUG_STATUS hotplug_onoff[NR_CPUS] = {IDLE, IDLE, IDLE, IDLE};
 	int delay;
 	int io_busy = hotplug_tuners_ins.hp_io_is_busy;
@@ -242,12 +239,8 @@ static void __ref hotplug_work_fn(struct work_struct *work)
 					pcpu_info->cur_down_rate = 1;
 					++offline_cpu;
 					continue;
-#if defined(CONFIG_POWERSUSPEND) || \
-	defined(CONFIG_HAS_EARLYSUSPEND)
-			} else if (force_up == true || (online_cpus + online_cpu) < min_cpus_online) {
-#else
 			} else if ((online_cpus + online_cpu) < min_cpus_online) {
-#endif
+
 					if (upcpu < upmaxcoreslimit) {
 						if (!cpu_online(upcpu)) {
 							hotplug_onoff[upcpu] = ON;
@@ -305,12 +298,6 @@ static void __ref hotplug_work_fn(struct work_struct *work)
 			cpu_down(cpu);
 	}
 
-#if defined(CONFIG_POWERSUSPEND) || \
-	defined(CONFIG_HAS_EARLYSUSPEND)
-	if (force_up == true)
-		hotplug_tuners_ins.force_cpu_up = false;
-#endif
-
 	delay = msecs_to_jiffies(hotplug_tuners_ins.hotplug_sampling_rate);
 
 /*	if (num_online_cpus() > 1) {
@@ -323,6 +310,23 @@ static void __ref hotplug_work_fn(struct work_struct *work)
 	queue_delayed_work_on(0, alucardhp_wq, &alucard_hotplug_work,
 							  delay);
 }
+
+static void wakeup_boost()
+{
+	unsigned int cpu;
+	for_each_possible_cpu(cpu) {
+		if (!cpu_online(cpu))
+			cpu_up(cpu);
+	}
+
+	msleep(2500);
+	INIT_DELAYED_WORK(&alucard_hotplug_work, hotplug_work_fn);
+	queue_delayed_work_on(0, alucardhp_wq, &alucard_hotplug_work,
+			msecs_to_jiffies(hotplug_tuners_ins.hotplug_sampling_rate));
+
+}
+
+
 
 #if defined(CONFIG_POWERSUSPEND) || defined(CONFIG_HAS_EARLYSUSPEND)
 #ifdef CONFIG_POWERSUSPEND
@@ -361,11 +365,8 @@ static void __ref alucard_hotplug_late_resume(
 			mutex_lock(&hotplug_tuners_ins.alu_hotplug_mutex);
 			hotplug_tuners_ins.suspended = false;
 			// wake up everyone
-			hotplug_tuners_ins.force_cpu_up = true;
 			mutex_unlock(&hotplug_tuners_ins.alu_hotplug_mutex);
-			INIT_DELAYED_WORK(&alucard_hotplug_work, hotplug_work_fn);
-			queue_delayed_work_on(0, alucardhp_wq, &alucard_hotplug_work,
-					msecs_to_jiffies(hotplug_tuners_ins.hotplug_sampling_rate));
+			wakeup_boost();
 	}
 }
 
@@ -404,7 +405,6 @@ static int hotplug_start(void)
 #if defined(CONFIG_POWERSUSPEND) || \
 	defined(CONFIG_HAS_EARLYSUSPEND)
 	hotplug_tuners_ins.suspended = false;
-	hotplug_tuners_ins.force_cpu_up = false;
 #endif
 
 	get_online_cpus();
