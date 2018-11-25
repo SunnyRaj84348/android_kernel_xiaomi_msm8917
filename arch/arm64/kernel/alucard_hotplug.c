@@ -339,6 +339,12 @@ static void __ref alucard_hotplug_early_suspend(struct early_suspend *handler)
 			mutex_unlock(&hotplug_tuners_ins.alu_hotplug_mutex);
 
 			cancel_delayed_work_sync(&alucard_hotplug_work);
+
+			for_each_possible_cpu(cpu)
+				if (cpu != 0 && cpu_online(cpu))
+					cpu_down(cpu);
+
+			cpu_up(1);
 	}
 
 }
