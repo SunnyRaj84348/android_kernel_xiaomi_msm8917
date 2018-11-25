@@ -331,12 +331,16 @@ static void __ref alucard_hotplug_suspend(struct power_suspend *handler)
 static void __ref alucard_hotplug_early_suspend(struct early_suspend *handler)
 #endif
 {
+	unsigned int cpu;
 	if (hotplug_tuners_ins.hotplug_enable > 0
 		&& hotplug_tuners_ins.hotplug_suspend == 1) { 
 			mutex_lock(&hotplug_tuners_ins.alu_hotplug_mutex);
 			hotplug_tuners_ins.suspended = true;
 			mutex_unlock(&hotplug_tuners_ins.alu_hotplug_mutex);
+
+			cancel_delayed_work_sync(&alucard_hotplug_work);
 	}
+
 }
 
 #ifdef CONFIG_POWERSUSPEND
@@ -353,6 +357,9 @@ static void __ref alucard_hotplug_late_resume(
 			// wake up everyone
 			hotplug_tuners_ins.force_cpu_up = true;
 			mutex_unlock(&hotplug_tuners_ins.alu_hotplug_mutex);
+			INIT_DELAYED_WORK(&alucard_hotplug_work, hotplug_work_fn);
+			queue_delayed_work_on(0, alucardhp_wq, &alucard_hotplug_work,
+					msecs_to_jiffies(hotplug_tuners_ins.hotplug_sampling_rate));
 	}
 }
 
