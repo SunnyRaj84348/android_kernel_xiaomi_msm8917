@@ -1208,15 +1208,11 @@ static struct attribute_group zram_disk_attr_group = {
 };
 
 static const struct attribute_group *zram_disk_attr_groups[] = {
-        &zram_disk_attr_group,
-        NULL,
+	&zram_disk_attr_group,
+	NULL,
 };
 
-/*
- * Allocate and initialize new zram device. the function returns
- * '>= 0' device_id upon success, and negative value otherwise.
- */
-static int zram_add(void)
+static int create_device(struct zram *zram, int device_id)
 {
 	struct request_queue *queue;
 	int ret = -ENOMEM;
@@ -1280,7 +1276,6 @@ static int zram_add(void)
 		zram->disk->queue->limits.discard_zeroes_data = 0;
 	queue_flag_set_unlocked(QUEUE_FLAG_DISCARD, zram->disk->queue);
 
-	add_disk(zram->disk);
 	disk_to_dev(zram->disk)->groups = zram_disk_attr_groups;
 	add_disk(zram->disk);
 
@@ -1295,59 +1290,7 @@ out:
 	return ret;
 }
 
-static int zram_remove(struct zram *zram)
-{
-	struct block_device *bdev;
-
-	bdev = bdget_disk(zram->disk, 0);
-	if (!bdev)
-		return -ENOMEM;
-
-	mutex_lock(&bdev->bd_mutex);
-	if (bdev->bd_openers || zram->claim) {
-		mutex_unlock(&bdev->bd_mutex);
-		bdput(bdev);
-		return -EBUSY;
-	}
-
-	zram->claim = true;
-	mutex_unlock(&bdev->bd_mutex);
-
-	/* Make sure all the pending I/O are finished */
-	fsync_bdev(bdev);
-	zram_reset_device(zram);
-	bdput(bdev);
-
-	pr_info("Removed device: %s\n", zram->disk->disk_name);
-
-	idr_remove(&zram_index_idr, zram->disk->first_minor);
-	blk_cleanup_queue(zram->disk->queue);
-	del_gendisk(zram->disk);
-	put_disk(zram->disk);
-	kfree(zram);
-	return 0;
-}
-
-/* zram-control sysfs attributes */
-static ssize_t hot_add_show(struct class *class,
-			struct class_attribute *attr,
-			char *buf)
-{
-	int ret;
-
-	mutex_lock(&zram_index_mutex);
-	ret = zram_add();
-	mutex_unlock(&zram_index_mutex);
-
-	if (ret < 0)
-		return ret;
-	return scnprintf(buf, PAGE_SIZE, "%d\n", ret);
-}
-
-static ssize_t hot_remove_store(struct class *class,
-			struct class_attribute *attr,
-			const char *buf,
-			size_t count)
+static void destroy_devices(unsigned int nr)
 {
 	struct zram *zram;
 	unsigned int i;
@@ -1420,4 +1363,3 @@ MODULE_PARM_DESC(num_devices, "Number of zram devices");
 MODULE_LICENSE("Dual BSD/GPL");
 MODULE_AUTHOR("Nitin Gupta <ngupta@vflare.org>");
 MODULE_DESCRIPTION("Compressed RAM Block Device");
-
