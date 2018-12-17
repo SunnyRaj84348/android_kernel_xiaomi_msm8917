@@ -66,6 +66,6 @@ obj-$(CONFIG_VIB_GPIO)		        += gpio_vib.o
 
 # LED SPI Drivers
 obj-$(CONFIG_LEDS_DAC124S085)		+= leds-dac124s085.o
-obj-y				+=leds-msm-gpio-flash.o
 
+# LED Triggers
 obj-$(CONFIG_LEDS_TRIGGERS)		+= trigger/
