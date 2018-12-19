@@ -43,7 +43,6 @@ static u8 cfg_version;
 #define GTP_READ_LOCKDOWN_INFO_ADDR  0x81A0
 static u8 lockdown_info[GTP_LOCKDOWN_SIZE];
 static u8 TP_Maker, LCD_Maker, Panel_Ink;
-extern u8 tp_color;
 static u16 IC_Version;
 static int gtp_read_lockdown_info(void);
 int gtp_hardwareinfo_set(void);
@@ -2740,7 +2739,6 @@ static int gtp_read_lockdown_info(void)
 	TP_Maker = lockdown_info[0];
 	LCD_Maker = lockdown_info[1];
 	Panel_Ink = lockdown_info[2];
-	tp_color =  lockdown_info[2];
 	GTP_INFO("Lockdown info: %02X %02X %02X %02X %02X %02X %02X %02X",
 				lockdown_info[0], lockdown_info[1],
 				lockdown_info[2], lockdown_info[3],
@@ -2761,7 +2759,7 @@ int gtp_hardwareinfo_set(void)
 	int ret;
 	u16 ic_ver;
 		gtp_read_lockdown_info();
-		switch (tp_color) {
+		switch (Panel_Ink) {
 		case TP_White:
 			snprintf(color, HARDWARE_MAX_ITEM_LONGTH, "White");
 			break;
