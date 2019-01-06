@@ -46,7 +46,7 @@
 		qcom,power-conf = <8294400>; /* WxH - 3840*2160 */
 		qcom,pm-qos-latency-us = <651>;
 		qcom,firmware-name = "venus";
-		qcom,allowed-clock-rates = <360000000 329140000
+		qcom,allowed-clock-rates = <400000000 329140000
 			308570000 270000000 200000000>;
 		qcom,clock-freq-tbl {
 			qcom,profile-enc {
