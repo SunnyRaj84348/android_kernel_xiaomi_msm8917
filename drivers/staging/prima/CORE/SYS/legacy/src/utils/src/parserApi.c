@@ -1110,6 +1110,8 @@ PopulateDot11fExtCap(tpAniSirGlobal      pMac,
        }
     }
 
+    p_ext_cap->fils_capability = 0;
+
     if (pDot11f->present)
     {
         /* Need to compute the num_bytes based on bits set */
@@ -5602,8 +5604,8 @@ sap_auth_offload_construct_rsn_opaque( tDot11fIERSN *pdot11f_rsn,
 }
 
 void
-sap_auth_offload_update_rsn_ie( tpAniSirGlobal pmac,
-        tDot11fIERSNOpaque *pdot11f)
+sap_auth_offload_update_rsn_ie(tpAniSirGlobal pmac,
+			tDot11fIERSNOpaque *pdot11f)
 {
     tDot11fIERSN *pdot11f_rsn;
     pdot11f_rsn = vos_mem_malloc(sizeof(tDot11fIERSN));
@@ -5647,6 +5649,7 @@ sap_auth_offload_update_rsn_ie( tpAniSirGlobal pmac,
                 break;
         }
     }
+    vos_mem_free(pdot11f_rsn);
 }
 #endif /* SAP_AUTH_OFFLOAD */
 
