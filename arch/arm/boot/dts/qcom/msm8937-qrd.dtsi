@@ -12,6 +12,7 @@
  */
 
 #include "msm8937-pinctrl.dtsi"
+#include "msm8937-camera-sensor-qrd.dtsi"
 
 &soc {
 	gpio_keys {
@@ -28,11 +29,6 @@
 			linux,code = <115>;
 			debounce-interval = <15>;
 		};
-	};
-
-
-	boardinfo {
-		compatible = "wt:boardinfo";
 	};
 };
 
@@ -87,7 +83,6 @@
 	vdd-supply = <&pm8937_l8>;
 	qcom,vdd-voltage-level = <2900000 2900000>;
 	qcom,vdd-current-level = <200 570000>;
-	qcom,vdd-always-on;
 
 	/* device communication power supply */
 	vdd-io-supply = <&pm8937_l5>;
