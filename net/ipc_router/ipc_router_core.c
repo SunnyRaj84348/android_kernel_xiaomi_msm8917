@@ -3991,6 +3991,8 @@ static void debugfs_init(void) {}
 static void *ipc_router_create_log_ctx(char *name)
 {
 	struct ipc_rtr_log_ctx *sub_log_ctx;
+	if (!IS_ENABLED(CONFIG_IPC_LOGGING))
+		return NULL;
 
 	sub_log_ctx = kmalloc(sizeof(struct ipc_rtr_log_ctx),
 				GFP_KERNEL);
