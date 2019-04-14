@@ -64,7 +64,7 @@ static bool force_warm_reboot;
  * There is no API from TZ to re-enable the registers.
  * So the SDI cannot be re-enabled when it already by-passed.
  */
-static int download_mode = 1;
+static int download_mode = !IS_ENABLED(CONFIG_MACH_XIAOMI_RIVA);
 #else
 static const int download_mode;
 #endif
