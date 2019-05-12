@@ -1733,6 +1733,29 @@ void hdd_select_cbmode( hdd_adapter_t *pAdapter,v_U8_t operationChannel);
 int wlan_hdd_restore_channels(hdd_context_t *pHddCtx);
 
 /*
+ * wlan_hdd_disable_channels() - Cache the the channels
+ * and current state of the channels from the channel list
+ * received in the command and disable the channels on the
+ * wiphy and NV table.
+ * @hdd_ctx: Pointer to hdd context
+ *
+ * @return: 0 on success, Error code on failure
+ */
+int wlan_hdd_disable_channels(hdd_context_t *hdd_ctx);
+
+/*
+ * hdd_check_and_disconnect_sta_on_invalid_channel() - Disconnect STA if it is
+ * on indoor channel
+ * @hdd_ctx: pointer to hdd context
+ *
+ * STA should be disconnected before starting the SAP if it is on indoor
+ * channel.
+ *
+ * Return: void
+ */
+void hdd_check_and_disconnect_sta_on_invalid_channel(hdd_context_t *hdd_ctx);
+
+/*
  * hdd_update_indoor_channel() - enable/disable indoor channel
  * @hdd_ctx: hdd context
  * @disable: whether to enable / disable indoor channel
@@ -1899,5 +1922,25 @@ VOS_STATUS wlan_hdd_send_sta_authorized_event(hdd_adapter_t *adapter,
  * Return: 0 for success, non-zero for failure
  */
 int wlan_hdd_disconnect(hdd_adapter_t *pAdapter, u16 reason);
+
+#if defined(CFG80211_SCAN_RANDOM_MAC_ADDR) || \
+	(LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0))
+/**
+ * wlan_hdd_cfg80211_scan_randomization_init() - Enable NL80211 scan randomize
+ * @wiphy: Pointer to wiphy structure
+ *
+ * This function is used to enable NL80211 scan randomization feature when
+ * ini: gEnableMacAddrSpoof is set to MAC_ADDR_SPOOFING_FW_HOST_ENABLE and
+ * cfg80211 supports scan randomization.
+ *
+ * Return: None
+ */
+void wlan_hdd_cfg80211_scan_randomization_init(struct wiphy *wiphy);
+#else
+static inline
+void wlan_hdd_cfg80211_scan_randomization_init(struct wiphy *wiphy)
+{
+}
+#endif
 
 #endif
