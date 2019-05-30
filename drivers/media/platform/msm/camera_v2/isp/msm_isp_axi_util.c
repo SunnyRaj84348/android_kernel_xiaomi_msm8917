@@ -695,7 +695,7 @@ void msm_isp_update_framedrop_reg(struct vfe_device *vfe_dev,
 		 * set to what we want
 		 */
 		if (stream_info->current_framedrop_period !=
-			stream_info->activated_framedrop_period) {
+			stream_info->requested_framedrop_period) {
 			msm_isp_cfg_framedrop_reg(vfe_dev, stream_info);
 		}
 		spin_unlock_irqrestore(&stream_info->lock, flags);
