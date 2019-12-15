@@ -365,6 +365,7 @@ enum binder_driver_return_protocol {
 	/*
 	 * binder_transaction_data_secctx: the received command.
 	 */
+
 	BR_TRANSACTION = _IOR('r', 2, struct binder_transaction_data),
 	BR_REPLY = _IOR('r', 3, struct binder_transaction_data),
 	/*
