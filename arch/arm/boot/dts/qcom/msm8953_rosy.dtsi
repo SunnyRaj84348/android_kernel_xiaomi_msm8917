@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2015-2017, The Linux Foundation. All rights reserved.
  * Copyright (C) 2019 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -38,14 +38,14 @@
 					type = "ext4";
 					mnt_flags = "ro,barrier=1,discard";
 					fsmgr_flags = "wait";
-					status = "ok";
+					status = "disable";
 				};
 				system {
 					compatible = "android,system";
 					dev = "/dev/block/platform/soc/7824900.sdhci/by-name/system";
 					type = "ext4";
 					mnt_flags = "ro,barrier=1,discard";
-					fsmgr_flags = "wait";
+					fsmgr_flags = "wait,verify";
 					status = "ok";
 				};
 
@@ -61,7 +61,7 @@
 		other_ext_mem: other_ext_region@0 {
 			compatible = "removed-dma-pool";
 			no-map;
-			reg = <0x0 0x85b00000 0x0 0xd00000>;
+			reg = <0x0 0x84A00000 0x0 0x1E00000>;
 		};
 
 		modem_mem: modem_region@0 {
@@ -148,6 +148,10 @@
 		i2c3 = &i2c_3;
 		i2c5 = &i2c_5;
 		spi3 = &spi_3;
+        spi6 = &spi_6;
+		/* wangli1, 2017/0717,Audio bring up begin */
+		i2c8 = &i2c_8;
+		/* wangli1, 2017/0717,Audio bring up end */
 	};
 
 	soc: soc { };
@@ -743,6 +747,40 @@
 		qcom,master-id = <86>;
 	};
 
+	spi_6: spi@7af6000 {
+		compatible = "qcom,spi-qup-v2";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		reg-names = "spi_physical", "spi_bam_physical";
+		reg = <0x7af6000 0x600>,
+			<0x7ac4000 0x1f000>;
+		interrupt-names = "spi_irq", "spi_bam_irq";
+		interrupts = <0 300 0>, <0 239 0>;
+		spi-max-frequency = <50000000>;
+		pinctrl-names = "spi_default", "spi_sleep";
+		pinctrl-0 = <&spi6_default &spi6_cs0_active>;
+		pinctrl-1 = <&spi6_sleep &spi6_cs0_sleep>;
+		clocks = <&clock_gcc clk_gcc_blsp2_ahb_clk>,
+				<&clock_gcc clk_gcc_blsp2_qup2_spi_apps_clk>;
+		clock-names = "iface_clk", "core_clk";
+		qcom,infinite-mode = <0>;
+		qcom,use-bam;
+		qcom,rt-priority;
+		qcom,use-pinctrl;
+		qcom,ver-reg-exists;
+		qcom,bam-consumer-pipe-index = <6>;
+		qcom,bam-producer-pipe-index = <7>;
+		qcom,master-id = <84>;
+		status = "ok";
+		spi_ir@1 {
+			compatible = "qcom,spi-msm-codec-slave";
+			reg = <1>;
+			spi-max-frequency = <50000000>;
+			spi-cpol;
+			status = "ok";
+		};
+	};
+
 	i2c_2: i2c@78b6000 { /* BLSP1 QUP2 */
 		compatible = "qcom,i2c-msm-v2";
 		#address-cells = <1>;
@@ -766,29 +804,60 @@
 		dmas = <&dma_blsp1 6 64 0x20000020 0x20>,
 			<&dma_blsp1 7 32 0x20000020 0x20>;
 		dma-names = "tx", "rx";
+ /* i2c 2 */
+		aw2013@45 { /*blink */
+		compatible = "awinc,aw2013";
+		reg = <0x45>;
+		rgb_led-supply = <&pm8953_l10>;
 
-		/* DSI_TO_HDMI I2C configuration */
-		adv7533@39 {
-			compatible = "adv7533";
-			reg = <0x39>;
-			instance_id = <0>;
-			adi,video-mode = <3>; /* 3 = 1080p */
-			adi,main-addr = <0x39>;
-			adi,cec-dsi-addr = <0x3C>;
-			adi,enable-audio;
-			pinctrl-names = "pmx_adv7533_active",
-						"pmx_adv7533_suspend";
-			pinctrl-0 = <&adv7533_int_active>;
-			pinctrl-1 = <&adv7533_int_suspend>;
-			adi,irq-gpio = <&tlmm 90 0x2002>;
-			hpd-5v-en-supply = <&adv_vreg>;
-			qcom,supply-names = "hpd-5v-en";
-			qcom,min-voltage-level = <0>;
-			qcom,max-voltage-level = <0>;
-			qcom,enable-load = <0>;
-			qcom,disable-load = <0>;
+		red {
+			label = "red";
+			linux,default-trigger = "battery-red";
+			default-state = "off";
+			retain-state-suspended;
 		};
-	};
+
+		green {
+			label = "green";
+			linux,default-trigger = "battery-green";
+			default-state = "off";
+			retain-state-suspended;
+		};
+
+		blue {
+			label = "blue";
+			linux,default-trigger = "battery-blue";
+			default-state = "off";
+			retain-state-suspended;
+		};
+		white {
+			label = "white";
+			linux,default-trigger = "none";
+			default-state = "off";
+			retain-state-suspended;
+		};
+
+		yellow {
+			label = "yellow";
+			linux,default-trigger = "none";
+			default-state = "off";
+			retain-state-suspended;
+		};
+
+		cyan {
+			label = "cyan";
+			linux,default-trigger = "none";
+			default-state = "off";
+			retain-state-suspended;
+		};
+		purple {
+			label = "purple";
+			linux,default-trigger = "none";
+			default-state = "off";
+			retain-state-suspended;
+		};
+		};
+};
 
 	i2c_3: i2c@78b7000 { /* BLSP1 QUP3 */
 		compatible = "qcom,i2c-msm-v2";
@@ -813,7 +882,7 @@
 		dmas = <&dma_blsp1 8 64 0x20000020 0x20>,
 			<&dma_blsp1 9 32 0x20000020 0x20>;
 		dma-names = "tx", "rx";
-		status = "disabled";
+		status = "okay";
 	};
 
 	i2c_5: i2c@7af5000 { /* BLSP2 QUP1 */
@@ -840,6 +909,39 @@
 			<&dma_blsp2 5 32 0x20000020 0x20>;
 		dma-names = "tx", "rx";
 	};
+
+/*wangli1, 2017/0717,Audio bring up begin*/
+	i2c_8: i2c@7af8000 { /* BLSP2 QUP3 */
+		compatible = "qcom,i2c-msm-v2";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		reg-names = "qup_phys_addr";
+		reg = <0x7af8000 0x600>;
+		interrupt-names = "qup_irq";
+		interrupts = <0 302 0>;
+		qcom,clk-freq-out = <400000>;
+		qcom,clk-freq-in  = <19200000>;
+		clock-names = "iface_clk", "core_clk";
+		clocks = <&clock_gcc clk_gcc_blsp2_ahb_clk>,
+			<&clock_gcc clk_gcc_blsp2_qup4_i2c_apps_clk>;
+
+		pinctrl-names = "i2c_active", "i2c_sleep";
+		pinctrl-0 = <&i2c_8_active>;
+		pinctrl-1 = <&i2c_8_sleep>;
+		qcom,noise-rjct-scl = <0>;
+		qcom,noise-rjct-sda = <0>;
+		qcom,master-id = <84>;
+		dmas = <&dma_blsp2 10 64 0x20000020 0x20>,
+			<&dma_blsp2 11 32 0x20000020 0x20>;
+		dma-names = "tx", "rx";
+
+		aw87319@58{ /*AW87319 PA*/
+		compatible = "awinic,aw87319_pa";
+		reg = <0x58>;
+		qcom,ext_pa_spk_aw87319_rst = <&tlmm 96 0>;
+		};
+	};
+/*wangli1, 2017/0717,Audio bring up end*/
 
 	slim_msm: slim@c140000{
 		cell-index = <1>;
@@ -1193,7 +1295,7 @@
 		reg = <0xb017000 0x1000>;
 		reg-names = "wdt-base";
 		interrupts = <0 3 0>, <0 4 0>;
-		qcom,bark-time = <11000>;
+		qcom,bark-time = <15000>;
 		qcom,pet-time = <10000>;
 		qcom,ipi-ping;
 		qcom,wakeup-enable;
@@ -1224,9 +1326,9 @@
 			reg = <0x10 8>;
 		};
 
-		dload_type@1c {
+		dload_type@18 {
 			compatible = "qcom,msm-imem-dload-type";
-			reg = <0x1c 4>;
+			reg = <0x18 4>;
 		};
 
 		restart_reason@65c {
@@ -1271,6 +1373,18 @@
 			label = "modem";
 		};
 	};
+
+        sn_fuse: snfuse@0xA60A8 {
+                compatible = "qcom,sn-fuse";
+                reg = <0xA60A8 0x4>;
+                reg-names = "sn-base";
+        };
+
+        sec_boot_fuse: secbootfuse@0xA01D0 {
+                compatible = "qcom,sec-boot-fuse";
+                reg = <0xA01D0 0x4>;
+                reg-names = "sec-boot-base";
+        };
 
 	jtag_fuse: jtagfuse@a601c {
 		compatible = "qcom,jtag-fuse-v2";
@@ -1672,9 +1786,9 @@
 		qcom,ce-opp-freq = <100000000>;
 	};
 
-	qcom_seecom: qseecom@85b00000 {
+	qcom_seecom: qseecom@84A00000 {
 		compatible = "qcom,qseecom";
-		reg = <0x85b00000 0x800000>;
+		reg = <0x84A00000 0x1900000>;
 		reg-names = "secapp-region";
 		qcom,hlos-num-ce-hw-instances = <1>;
 		qcom,hlos-ce-hw-instance = <0>;
@@ -1773,10 +1887,8 @@
 
 	sdhc_1: sdhci@7824900 {
 		compatible = "qcom,sdhci-msm";
-		reg = <0x7824900 0x500>, <0x7824000 0x800>, <0x7824e00 0x200>,
-				<0x0119d000 0x4>;
-		reg-names = "hc_mem", "core_mem", "cmdq_mem",
-				"tlmm_mem";
+		reg = <0x7824900 0x500>, <0x7824000 0x800>, <0x7824e00 0x200>;
+		reg-names = "hc_mem", "core_mem", "cmdq_mem";
 
 		interrupts = <0 123 0>, <0 138 0>;
 		interrupt-names = "hc_irq", "pwr_irq";
@@ -2087,9 +2199,10 @@
 		interrupt-names = "hs_phy_irq", "ss_phy_irq", "pwr_event_irq";
 
 		USB3_GDSC-supply = <&gdsc_usb30>;
+		vbus_dwc3-supply = <&smbcharger_charger_otg>;
 		qcom,usb-dbm = <&dbm_1p5>;
 		qcom,msm-bus,name = "usb3";
-		qcom,msm-bus,num-cases = <3>;
+		qcom,msm-bus,num-cases = <2>;
 		qcom,msm-bus,num-paths = <1>;
 		qcom,msm-bus,vectors-KBps =
 					<61 512 0 0>,
@@ -2205,9 +2318,9 @@
 		qcom,vdd-voltage-level = <0 925000 925000>;
 
 		qcom,qusb-phy-init-seq = <0xF8 0x80
-					0xB3 0x84
+					0x73 0x84
 					0x83 0x88
-					0xC0 0x8C
+					0xC7 0x8C
 					0x14 0x9C
 					0x30 0x08
 					0x79 0x0C
@@ -2356,6 +2469,7 @@
 #include "msm-pm8953-rpm-regulator.dtsi"
 #include "msm-pm8953.dtsi"
 #include "msm8953-regulator.dtsi"
+#include "msm-pmi8940.dtsi"
 #include "msm-audio.dtsi"
 #include "msm8953-audio_rosy.dtsi"
 #include "msm-gdsc-8916.dtsi"
