@@ -1,4 +1,5 @@
 /* Copyright (c) 2012-2019, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2019 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -567,7 +568,7 @@ static int __read_queue(struct vidc_iface_q_info *qinfo, u8 *packet,
 	else
 		queue->qhdr_rx_req = receive_request;
 
-	queue->qhdr_read_idx = new_read_idx;
+		queue->qhdr_read_idx = new_read_idx;
 
 	*pb_tx_req_is_set = (1 == queue->qhdr_tx_req) ? 1 : 0;
 
