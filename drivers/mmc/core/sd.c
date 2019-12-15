@@ -1172,6 +1172,7 @@ static void mmc_sd_detect(struct mmc_host *host)
 	if (mmc_bus_needs_resume(host))
 		mmc_resume_bus(host);
 #endif
+mmc_power_up(host, host->ocr_avail);
 
 	/*
 	 * Just check if our card has been removed.
