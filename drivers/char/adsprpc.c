@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2012-2019, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2019 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -1148,6 +1149,8 @@ static int get_args(uint32_t kernel, struct smq_invoke_ctx *ctx)
 
 	/* allocate new buffer */
 	if (copylen) {
+		DEFINE_DMA_ATTRS(ctx_attrs);
+
 		err = fastrpc_buf_alloc(ctx->fl, copylen, ctx_attrs,
 					0, 0, &ctx->buf);
 		if (err)
@@ -1162,6 +1165,7 @@ static int get_args(uint32_t kernel, struct smq_invoke_ctx *ctx)
 	args = (uintptr_t)ctx->buf->virt + metalen;
 	for (i = 0; i < bufs; ++i) {
 		size_t len = lpra[i].buf.len;
+
 		list[i].num = 0;
 		list[i].pgidx = 0;
 		if (!len)
@@ -2040,8 +2044,8 @@ static int fastrpc_file_free(struct fastrpc_file *fl)
 		kref_put_mutex(&fl->apps->channel[cid].kref,
 				fastrpc_channel_close, &fl->apps->smd_mutex);
 
-bail:
 	mutex_destroy(&fl->map_mutex);
+bail:
 	fastrpc_remote_buf_list_free(fl);
 	kfree(fl);
 	return 0;
@@ -2485,7 +2489,7 @@ static long fastrpc_device_ioctl(struct file *file, unsigned int ioctl_num,
 		}
 		break;
 	case FASTRPC_IOCTL_GETINFO:
-	    K_COPY_FROM_USER(err, 0, &info, param, sizeof(info));
+		K_COPY_FROM_USER(err, 0, &info, param, sizeof(info));
 		if (err)
 			goto bail;
 		VERIFY(err, 0 == (err = fastrpc_get_info(fl, &info)));

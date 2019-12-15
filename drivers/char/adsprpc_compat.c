@@ -1,5 +1,6 @@
 /*
- * Copyright (c) 2014-2018, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2019, The Linux Foundation. All rights reserved.
+ * Copyright (C) 2019 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -101,6 +102,7 @@ struct compat_fastrpc_ioctl_control {
 		struct compat_fastrpc_ctrl_kalloc kalloc;
 	};
 };
+
 static int compat_get_fastrpc_ioctl_invoke(
 			struct compat_fastrpc_ioctl_invoke_fd __user *inv32,
 			struct fastrpc_ioctl_invoke_fd __user **inva,
