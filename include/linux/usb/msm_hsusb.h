@@ -123,7 +123,7 @@ enum msm_usb_phy_type {
 #define IDEV_CHG_MAX	1500
 #define IUNIT		100
 #define IDEV_HVDCP_CHG_MAX	1800
-#define IDEV_CHG_MIN 500
+#define IDEV_CHG_MIN 1500
 
 /**
  * Different states involved in USB charger detection.
