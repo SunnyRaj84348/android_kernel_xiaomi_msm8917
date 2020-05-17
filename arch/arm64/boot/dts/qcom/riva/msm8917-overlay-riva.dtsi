@@ -2,6 +2,7 @@
 #include "msm8917-camera-pinctrl-riva.dtsi"
 #include "msm8917-pinctrl-riva.dtsi"
 #include "msm8917-camera-sensor-qrd-riva.dtsi"
+#include "msm8917-cpu-riva.dtsi"
 #include "msm8917-mdss-riva.dtsi"
 #include "msm8917-pm-riva.dtsi"
 #include "msm8917-qrd-riva.dtsi"
