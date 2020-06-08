@@ -1138,6 +1138,18 @@ config TOUCHSCREEN_MAXIM_STI
 source "drivers/input/touchscreen/gt9xx/Kconfig"
 source "drivers/input/touchscreen/focaltech_touch/Kconfig"
 
+config TOUCHSCREEN_FT5346
+	tristate "FOCALTECH touchpanel FT5346 series"
+	depends on I2C
+
+source "drivers/input/touchscreen/FT5346/Kconfig"
+
+config TOUCHSCREEN_GT917D
+	tristate "GT917D touchscreens"
+	depends on I2C
+
+source "drivers/input/touchscreen/GT917D/Kconfig"
+
 config TOUCHSCREEN_HIMAX_CHIPSET
 	bool "Himax touchpanel CHIPSET"
 	depends on I2C
