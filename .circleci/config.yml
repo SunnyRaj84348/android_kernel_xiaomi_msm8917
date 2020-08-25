@@ -1,0 +1,9 @@
+version: 2
+jobs:
+  build:
+    docker:
+      - image: erwinabs/kernel_dockerfile:latest
+    steps:
+      - checkout
+      - run: wget https://github.com/erwinabs/Scripts/raw/master/kernel.sh
+      - run: bash kernel.sh
