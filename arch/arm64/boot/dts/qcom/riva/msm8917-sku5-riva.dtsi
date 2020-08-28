@@ -317,6 +317,10 @@
 		<0x53 0x80 0x39 0x81 0x37 0x82 0xffffffff>;
 };
 
+&apps_iommu {
+	qcom,no-aarch64;
+};
+
 / {
 	qrd_batterydata: qcom,battery-data {
 			qcom,batt-id-range-pct = <15>;
