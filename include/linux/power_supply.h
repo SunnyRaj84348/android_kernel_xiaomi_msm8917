@@ -253,6 +253,7 @@ enum power_supply_property {
 	POWER_SUPPLY_PROP_RESTRICTED_CHARGING,
 	POWER_SUPPLY_PROP_CURRENT_CAPABILITY,
 	POWER_SUPPLY_PROP_TYPEC_MODE,
+	POWER_SUPPLY_PROP_CHARGING_CALL_STATE,
 	POWER_SUPPLY_PROP_TYPEC_CC_ORIENTATION, /* 0: N/C, 1: CC1, 2: CC2 */
 	POWER_SUPPLY_PROP_TYPEC_POWER_ROLE,
 	POWER_SUPPLY_PROP_PD_ALLOWED,
@@ -513,6 +514,9 @@ extern int power_supply_is_system_supplied(void);
 #else
 static inline int power_supply_is_system_supplied(void) { return -EIO; }
 #endif
+
+extern int power_supply_set_online(struct power_supply *psy, bool enable);
+extern int power_supply_set_present(struct power_supply *psy, bool enable);
 
 extern int power_supply_get_property(struct power_supply *psy,
 			    enum power_supply_property psp,
