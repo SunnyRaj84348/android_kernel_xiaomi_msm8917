@@ -317,10 +317,10 @@ static void wcd_enable_mbhc_supply(struct wcd_mbhc *mbhc,
 				wcd_enable_curr_micbias(mbhc,
 						WCD_MBHC_EN_PULLUP);
 			} else {
-				wcd_enable_curr_micbias(mbhc, WCD_MBHC_EN_CS);
+				wcd_enable_curr_micbias(mbhc, WCD_MBHC_EN_MB);
 			}
 		} else if (plug_type == MBHC_PLUG_TYPE_HEADPHONE) {
-			wcd_enable_curr_micbias(mbhc, WCD_MBHC_EN_CS);
+			wcd_enable_curr_micbias(mbhc, WCD_MBHC_EN_MB);
 		} else {
 			wcd_enable_curr_micbias(mbhc, WCD_MBHC_EN_NONE);
 		}
@@ -781,8 +781,13 @@ exit:
 		wcd_mbhc_hs_elec_irq(mbhc, WCD_MBHC_ELEC_HS_REM, true);
 		WCD_MBHC_RSC_UNLOCK(mbhc);
 	}
-	if (mbhc->mbhc_cb->set_cap_mode)
+	if (mbhc->mbhc_cb->set_cap_mode) {
+		if (plug_type == MBHC_PLUG_TYPE_HEADSET) {
+			mbhc->mbhc_cb->set_cap_mode(codec, micbias1, true);
+			pr_debug("%s:set_cap_mode micbias1=%d, micbias2 = %d==>true , MBHC_PLUG_TYPE_HEADSET\n", __func__, micbias1, micbias2);
+		} else
 		mbhc->mbhc_cb->set_cap_mode(codec, micbias1, micbias2);
+	}
 
 	if (mbhc->mbhc_cb->hph_pull_down_ctrl)
 		mbhc->mbhc_cb->hph_pull_down_ctrl(codec, true);
