@@ -16,6 +16,10 @@
 	aliases {
 		spi7 = &spi_7;
 	};
+
+	chosen {
+		/delete-property/ bootargs;
+	};
 };
 
 &other_ext_mem {
