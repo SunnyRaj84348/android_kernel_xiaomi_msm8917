@@ -1428,12 +1428,6 @@ config TOUCHSCREEN_FT5346
 
 source "drivers/input/touchscreen/FT5346/Kconfig"
 
-config TOUCHSCREEN_GT917D
-	tristate "GT917D touchscreens"
-	depends on I2C
-
-source "drivers/input/touchscreen/GT917D/Kconfig"
-
 config TOUCHSCREEN_HIMAX_CHIPSET
 	bool "Himax touchpanel CHIPSET"
 	depends on I2C
