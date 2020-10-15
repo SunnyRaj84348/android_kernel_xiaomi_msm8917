@@ -100,6 +100,7 @@
 		qcom,eeprom-name = "s5k5e8_qtech_riva";
 		compatible = "qcom,eeprom";
 		qcom,slave-addr = <0x5a>;
+		qcom,cci-master = <0>;
 
 		qcom,num-blocks = <5>;
 		qcom,page0 = <1 0x0A00 2 0x04 1 1>;
@@ -161,6 +162,10 @@
 			"sensor_gpio_standby";
 		qcom,cam-power-seq-cfg-val = <0 0 24000000 1 1 1 1 1>;
 		qcom,cam-power-seq-delay = <1 5 1 1 1 1 1 1 10>;
+		status = "ok";
+		clocks = <&clock_gcc clk_mclk2_clk_src>,
+			<&clock_gcc clk_gcc_camss_mclk2_clk>;
+		clock-names = "cam_src_clk", "cam_clk";
 		qcom,clock-rates = <24000000 0>;
 	};
 
