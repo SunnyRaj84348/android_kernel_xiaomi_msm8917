@@ -38,6 +38,7 @@ static const char *goodix_ts_name = "goodix-ts";
 static const char *goodix_input_phys = "input/ts";
 struct i2c_client *i2c_connect_client;
 static struct proc_dir_entry *gtp_config_proc;
+static struct proc_dir_entry *gtp_wakeup_gesture_proc;
 
 enum doze {
 	DOZE_DISABLED = 0,
@@ -56,6 +57,26 @@ static int gtp_register_powermanager(struct goodix_ts_data *ts);
 static int gtp_esd_init(struct goodix_ts_data *ts);
 static void gtp_esd_check_func(struct work_struct *);
 static int gtp_init_ext_watchdog(struct i2c_client *client);
+
+#define WAKEUP_OFF 4
+#define WAKEUP_ON 5
+bool GTP_gesture_func_on = false;
+
+int gtp_gesture_switch(struct input_dev *dev, unsigned int type, unsigned int code, int value)
+{
+	unsigned int input ;
+	if (type == EV_SYN && code == SYN_CONFIG)
+	{
+		if (value == WAKEUP_OFF){
+			GTP_gesture_func_on = false;
+			input = 0;
+		}else if (value == WAKEUP_ON){
+			GTP_gesture_func_on  = true;
+			input = 1;
+		}
+	}
+	return 0;
+}
 
 /*
  * return: 2 - ok, < 0 - i2c transfer error
@@ -326,9 +347,9 @@ static int gtp_gesture_handler(struct goodix_ts_data *ts)
 	    (doze_buf[2] == 0xBA) || (doze_buf[2] == 0xBB) ||
 	    (doze_buf[2] == 0xCC)) {
 		doze_status = DOZE_WAKEUP;
-		input_report_key(ts->input_dev, KEY_POWER, 1);
+		input_report_key(ts->input_dev, KEY_WAKEUP, 1);
 		input_sync(ts->input_dev);
-		input_report_key(ts->input_dev, KEY_POWER, 0);
+		input_report_key(ts->input_dev, KEY_WAKEUP, 0);
 		input_sync(ts->input_dev);
 		/*  clear 0x814B */
 		doze_buf[2] = 0x00;
@@ -1562,6 +1583,59 @@ static int gtp_request_io_port(struct goodix_ts_data *ts)
 	return 0;
 }
 
+static ssize_t gtp_wakeup_gesture_write(struct file *file, const char __user *buffer,
+        size_t count, loff_t *pos)
+{
+	char mode = -1;
+
+	if (count > 0) {
+		if (get_user(mode, buffer))
+			return -EFAULT;
+		if (mode == '1')
+			GTP_gesture_func_on = true;
+		else
+			GTP_gesture_func_on = false;
+	}
+
+	return count;
+}
+
+static int gtp_wakeup_gesture_show(struct seq_file *file, void *data)
+{
+
+	seq_printf(file, "%c\n", GTP_gesture_func_on?'1':'0');
+
+	return 0;
+}
+
+static int gtp_wakeup_gesture_open (struct inode *inode, struct file *file)
+{
+	return single_open(file, gtp_wakeup_gesture_show, NULL);
+}
+
+static const struct file_operations wakeup_gesture_ops = {
+    .owner = THIS_MODULE,
+    .open = gtp_wakeup_gesture_open,
+    .read = seq_read,
+    .write = gtp_wakeup_gesture_write,
+};
+
+
+int gtp_create_wakeup_gesture_proc(struct i2c_client *client,struct goodix_ts_data *ts){
+	int ret = 0;
+	struct proc_dir_entry *gest;
+	gest=proc_mkdir("gesture", NULL);
+
+	gtp_wakeup_gesture_proc = proc_create(GT9XX_WAKEUP_GESTURE_PROC, 0666, gest, &wakeup_gesture_ops);
+		if (!gtp_wakeup_gesture_proc)
+			dev_err(&client->dev, "create_proc_entry %s failed\n",
+				GT9XX_WAKEUP_GESTURE_PROC);
+		else
+			dev_info(&client->dev, "create proc entry %s success\n",
+				 GT9XX_WAKEUP_GESTURE_PROC);
+	 return ret;
+}
+
 /*******************************************************
  * Function:
  *	Request interrupt if define irq pin, else use hrtimer
@@ -1637,7 +1711,7 @@ static s8 gtp_request_input_dev(struct goodix_ts_data *ts)
 				     ts->pdata->key_map[index]);
 
 	if (ts->pdata->slide_wakeup)
-		input_set_capability(ts->input_dev, EV_KEY, KEY_POWER);
+		input_set_capability(ts->input_dev, EV_KEY, KEY_WAKEUP);
 
 	if (ts->pdata->swap_x2y)
 		GTP_SWAP(ts->pdata->abs_size_x, ts->pdata->abs_size_y);
@@ -1659,6 +1733,8 @@ static s8 gtp_request_input_dev(struct goodix_ts_data *ts)
 		__set_bit(BTN_TOOL_PEN, ts->input_dev->keybit);
 		__set_bit(BTN_TOOL_FINGER, ts->input_dev->keybit);
 	}
+
+	ts->input_dev->event = gtp_gesture_switch;
 
 	ts->input_dev->name = goodix_ts_name;
 	ts->input_dev->phys = goodix_input_phys;
@@ -2184,6 +2260,7 @@ static int gtp_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	/* probe init finished */
 	ts->init_done = true;
 	gtp_work_control_enable(ts, true);
+	gtp_create_wakeup_gesture_proc(client, ts);
 
 	return 0;
 
@@ -2273,7 +2350,8 @@ static void gtp_suspend(struct goodix_ts_data *ts)
 
 	gtp_esd_off(ts);
 	gtp_work_control_enable(ts, false);
-	if (ts->pdata->slide_wakeup) {
+	if ((ts->pdata->slide_wakeup) && GTP_gesture_func_on) {
+		dev_info(&ts->client->dev,"gesture func on\n");
 		ret = gtp_enter_doze(ts);
 		gtp_work_control_enable(ts, true);
 	} else if (ts->pdata->power_off_sleep) {
