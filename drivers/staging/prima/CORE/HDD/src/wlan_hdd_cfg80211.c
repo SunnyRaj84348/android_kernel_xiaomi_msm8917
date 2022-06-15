@@ -99,7 +99,7 @@
 #include "qwlan_version.h"
 #include "wlan_logging_sock_svc.h"
 #include "wlan_hdd_misc.h"
-
+#include <linux/wcnss_wlan.h>
 
 #define g_mode_rates_size (12)
 #define a_mode_rates_size (8)
@@ -623,7 +623,8 @@ static const struct nla_policy wlan_hdd_tm_policy[WLAN_HDD_TM_ATTR_MAX + 1] =
 #ifdef FEATURE_WLAN_SW_PTA
 bool hdd_is_sw_pta_enabled(hdd_context_t *hdd_ctx)
 {
-	return hdd_ctx->cfg_ini->is_sw_pta_enabled;
+	return hdd_ctx->cfg_ini->is_sw_pta_enabled ||
+		wcnss_is_sw_pta_enabled();
 }
 #endif
 
@@ -6141,7 +6142,8 @@ __wlan_hdd_cfg80211_get_supported_features(struct wiphy *wiphy,
 #endif
 
 #ifdef FEATURE_WLAN_LFR
-    if (sme_IsFeatureSupportedByFW(BSSID_BLACKLIST)) {
+    if (pHddCtx->cfg_ini->bssid_blacklist_timeout &&
+        sme_IsFeatureSupportedByFW(BSSID_BLACKLIST)) {
         fset |= WIFI_FEATURE_CONTROL_ROAMING;
         hddLog(LOG1, FL("CONTROL_ROAMING supported by driver"));
     }
